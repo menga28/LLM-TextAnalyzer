@@ -1,0 +1,51 @@
+services:
+  fluentd:
+    build: ./fluentd
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentd/config:/fluentd/etc
+    depends_on:
+      - arangodb
+
+  arangodb:
+    image: arangodb/arangodb:latest
+    ports:
+      - "8529:8529"
+    environment:
+      ARANGO_ROOT_PASSWORD: llm_bigdata
+    volumes:
+      - arangodb-data:/var/lib/arangodb3
+    networks:
+      - backend
+
+  spark:
+    build: ./spark
+    ports:
+      - "8080:8080"
+    depends_on:
+      - arangodb
+    networks:
+      - backend
+
+  onprem:
+    build: ./onprem 
+    ports:
+      - "8000:8000"  
+    environment:
+      - MODEL_PATH=/datasets/llm_models
+    volumes:
+      - ./datasets/llm_models:/app/datasets/llm_models
+    networks:
+      - backend
+    depends_on:
+      - spark
+
+volumes:
+  arangodb-data:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
