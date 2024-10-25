@@ -1,0 +1,3 @@
+[submodule "onprem"]
+	path = onprem
+	url = https://github.com/amaiya/onprem.git
