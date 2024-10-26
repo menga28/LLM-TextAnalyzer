@@ -5,7 +5,8 @@ services:
       - "24224:24224"
       - "24224:24224/udp"
     volumes:
-      - ./fluentd/config:/fluentd/etc
+      - ./fluentd/etc:/fluentd/etc
+      - ./fluentd/log:/fluentd/log
     depends_on:
       - arangodb
 
@@ -30,7 +31,9 @@ services:
       - backend
 
   onprem:
-    build: ./onprem 
+    build:
+      context: .
+      dockerfile: Dockerfile.onprem
     ports:
       - "8000:8000"  
     environment:
