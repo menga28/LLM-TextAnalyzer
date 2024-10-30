@@ -15,7 +15,7 @@ services:
     ports:
       - "8529:8529"
     environment:
-      ARANGO_ROOT_PASSWORD: llm_bigdata
+      ARANGO_ROOT_PASSWORD: ${ARANGO_ROOT_PASSWORD} # Utilizza la variabile dal file .env
     volumes:
       - arangodb-data:/var/lib/arangodb3
     networks:
@@ -37,7 +37,7 @@ services:
     ports:
       - "8000:8000"  
     environment:
-      - MODEL_PATH=/datasets/llm_models
+      - MODEL_PATH=${MODEL_PATH} # Utilizza la variabile dal file .env
     volumes:
       - ./datasets/llm_models:/app/datasets/llm_models
     networks:
