@@ -1,21 +1,22 @@
 services:
-  fluentd:
-    build: ./fluentd
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.14.0
     volumes:
-      - ./fluentd/etc:/fluentd/etc
-      - ./fluentd/log:/fluentd/log
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./datasets:/datasets  # Per accedere ai file XML
+    ports:
+      - "5044:5044"
     depends_on:
       - arangodb
+    networks:
+      - backend
 
   arangodb:
     image: arangodb/arangodb:latest
     ports:
       - "8529:8529"
     environment:
-      ARANGO_ROOT_PASSWORD: ${ARANGO_ROOT_PASSWORD} # Utilizza la variabile dal file .env
+      ARANGO_ROOT_PASSWORD: ${ARANGO_ROOT_PASSWORD} # Dal file .env
     volumes:
       - arangodb-data:/var/lib/arangodb3
     networks:
@@ -37,7 +38,7 @@ services:
     ports:
       - "8000:8000"  
     environment:
-      - MODEL_PATH=${MODEL_PATH} # Utilizza la variabile dal file .env
+      - MODEL_PATH=${MODEL_PATH} # Dal file .env
     volumes:
       - ./datasets/llm_models:/app/datasets/llm_models
     networks:
