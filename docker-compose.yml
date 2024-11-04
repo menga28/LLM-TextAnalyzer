@@ -8,25 +8,28 @@ services:
       - ./fluentd/etc:/fluentd/etc
       - ./fluentd/log:/fluentd/log
     depends_on:
-      - arangodb
+      - couchdb
 
-  arangodb:
-    image: arangodb/arangodb:latest
+  couchdb:
+    build: ./couchdb
     ports:
-      - "8529:8529"
+      - "5984:5984"
     environment:
-      ARANGO_ROOT_PASSWORD: ${ARANGO_ROOT_PASSWORD} # Utilizza la variabile dal file .env
+      - COUCHDB_USER
+      - COUCHDB_PASSWORD
     volumes:
-      - arangodb-data:/var/lib/arangodb3
+      - couchdb-data:/opt/couchdb/data
     networks:
       - backend
+    env_file:
+      - .env
 
   spark:
     build: ./spark
     ports:
       - "8080:8080"
     depends_on:
-      - arangodb
+      - couchdb
     networks:
       - backend
 
@@ -35,9 +38,9 @@ services:
       context: .
       dockerfile: Dockerfile.onprem
     ports:
-      - "8000:8000"  
+      - "8000:8000"
     environment:
-      - MODEL_PATH=${MODEL_PATH} # Utilizza la variabile dal file .env
+      - MODEL_PATH
     volumes:
       - ./datasets/llm_models:/app/datasets/llm_models
     networks:
@@ -46,7 +49,7 @@ services:
       - spark
 
 volumes:
-  arangodb-data:
+  couchdb-data:
     driver: local
 
 networks:
