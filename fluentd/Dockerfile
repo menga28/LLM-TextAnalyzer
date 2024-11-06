@@ -1,4 +1,4 @@
-# Base Fluentd image
+# Base Fluentd image (assicurati di utilizzare l'ultima versione stabile, se necessario)
 FROM fluent/fluentd:edge
 
 USER root
@@ -6,7 +6,7 @@ USER root
 # Install dependencies, Fluentd, and plugins in a single layer
 RUN apk update && \
     apk add --no-cache ruby-dev build-base && \
-    gem install nokogiri fluentd fluent-plugin-couch fluent-plugin-xml && \
+    gem install --no-document nokogiri fluentd fluent-plugin-couch fluent-plugin-xml fluent-plugin-parser && \
     fluentd --setup /fluentd && \
     apk del build-base ruby-dev
 

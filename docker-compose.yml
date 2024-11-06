@@ -7,8 +7,16 @@ services:
     volumes:
       - ./fluentd/etc:/fluentd/etc
       - ./fluentd/log:/fluentd/log
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     depends_on:
-      - couchdb
+      couchdb:
+        condition: service_healthy
+    command: ["fluentd", "-c", "/fluentd/etc/fluent.conf"]
+    networks:
+      - backend
+    restart: on-failure
 
   couchdb:
     build: ./couchdb
@@ -23,6 +31,11 @@ services:
       - backend
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 10s
+      retries: 5
+
 
   spark:
     build: ./spark

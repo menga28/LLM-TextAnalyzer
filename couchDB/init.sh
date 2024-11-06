@@ -10,5 +10,5 @@ until curl -s -o /dev/null http://$COUCHDB_IP:5984; do
 done
 
 # Crea il database _users se non esiste
-echo "Creazione del database _users..."
-curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/_users || echo "Il database _users esiste già."
+echo "Creazione del database _paperllm..."
+curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/paperllm || echo "Il database paperllm esiste già."
