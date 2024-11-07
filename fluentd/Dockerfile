@@ -6,7 +6,7 @@ USER root
 # Install dependencies, Fluentd, and plugins in a single layer
 RUN apk update && \
     apk add --no-cache ruby-dev build-base && \
-    gem install --no-document nokogiri fluentd fluent-plugin-couch fluent-plugin-xml fluent-plugin-parser && \
+    gem install --no-document nokogiri fluentd fluent-plugin-couch fluent-plugin-xml-parser fluent-plugin-parser && \
     fluentd --setup /fluentd && \
     apk del build-base ruby-dev
 

@@ -7,13 +7,19 @@ services:
     volumes:
       - ./fluentd/etc:/fluentd/etc
       - ./fluentd/log:/fluentd/log
+      - C:/Users/simon/Simone/Università/PROGETTI/LLM-TextAnalyzer/content.xml:/datasets/content.xml 
+      - C:/Users/simon/Simone/Università/PROGETTI/LLM-TextAnalyzer/query.xml:/datasets/query.xml 
+      - C:/Users/simon/Simone/Università/PROGETTI/LLM-TextAnalyzer/result.xml:/datasets/result.xml
+      #- C:/Users/simon/Simone/Università/PROGETTI/LLM-TextAnalyzer/test.xml:/datasets/test.xml
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    env_file: 
+      - .env
     depends_on:
       couchdb:
         condition: service_healthy
-    command: ["fluentd", "-c", "/fluentd/etc/fluent.conf"]
+    command: ["fluentd", "-c", "/fluentd/etc/fluent.conf", "-vv"]
     networks:
       - backend
     restart: on-failure
@@ -23,8 +29,8 @@ services:
     ports:
       - "5984:5984"
     environment:
-      - COUCHDB_USER
-      - COUCHDB_PASSWORD
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     volumes:
       - couchdb-data:/opt/couchdb/data
     networks:
