@@ -1,11 +1,18 @@
 import time
+import logging
+import time
+import threading
+from utils import xml_flattener
+
+def chiamata_periodica():
+    xml_flattener()
+    threading.Timer(5, xml_flattener).start()
+
 
 def main():
-    # Logica principale qui
+    chiamata_periodica()
     while True:
-        # Puoi mettere qui la logica di elaborazione o le chiamate ai servizi
-        print("Il container è attivo!")
-        time.sleep(60)  # Pausa di 60 secondi
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()
