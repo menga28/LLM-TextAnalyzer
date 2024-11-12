@@ -55,6 +55,7 @@ services:
       dockerfile: Dockerfile  # Assicurati che il nome del Dockerfile sia corretto
     volumes:
       - ./app:/app  # Monta la cartella app nel container
+      - ./datasets:/datasets
     networks:
       - backend
     restart: always
