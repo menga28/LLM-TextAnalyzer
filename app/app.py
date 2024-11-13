@@ -2,14 +2,14 @@ import time
 import logging
 import time
 import threading
-from utils import minify_query_xml
+from utils import query_xml_to_json, content_xml_to_json
 
 path_xml_dataset = "/datasets/"
 
 
 def chiamata_periodica():
-    minify_query_xml(path_xml_dataset+"query.xml")
-    
+    query_xml_to_json(path_xml_dataset+"query.xml")
+    content_xml_to_json(path_xml_dataset+"content.xml")
     threading.Timer(5, chiamata_periodica).start()
 
 

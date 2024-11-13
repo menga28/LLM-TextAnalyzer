@@ -1,2 +1,1 @@
-pandas
-lxml
+jsonpath-ng

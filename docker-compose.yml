@@ -17,7 +17,7 @@ services:
     depends_on:
       couchdb:
         condition: service_healthy
-    command: ["-c", "/fluentd/etc/test1.conf", "-vv"]
+    command: ["-c", "/fluentd/etc/test.conf", "-vv"]
     networks:
       - backend
     restart: on-failure

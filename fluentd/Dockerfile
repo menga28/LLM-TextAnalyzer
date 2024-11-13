@@ -4,11 +4,11 @@ FROM fluent/fluentd:edge
 USER root
 
 # Install dependencies, Fluentd, and plugins in a single layer
-RUN apk update && \
-    apk add --no-cache ruby-dev build-base && \
-    gem install --no-document nokogiri fluentd fluent-plugin-couch fluent-plugin-xml-parser fluent-plugin-parser && \
-    fluentd --setup /fluentd && \
-    apk del build-base ruby-dev
+# Install required packages
+RUN apk add --no-cache ruby ruby-dev build-base
+
+# Install Fluentd and plugins
+RUN gem install fluentd fluent-plugin-couch fluent-plugin-xml-parser fluent-plugin-parser fluent-plugin-xml
 
 # Copy the configuration file
 COPY etc/fluent.conf /fluentd/etc/fluent.conf
