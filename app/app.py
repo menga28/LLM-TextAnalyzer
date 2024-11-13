@@ -2,13 +2,14 @@ import time
 import logging
 import time
 import threading
-from utils import create_dataframe_from_xml
+from utils import minify_query_xml
 
-path_xml_dataset = "/datasets/result.xml"
+path_xml_dataset = "/datasets/"
 
 
 def chiamata_periodica():
-    create_dataframe_from_xml(path_xml_dataset)
+    minify_query_xml(path_xml_dataset+"query.xml")
+    
     threading.Timer(5, chiamata_periodica).start()
 
 
