@@ -1,107 +1,71 @@
 import xml.etree.ElementTree as ET
 import json
 import logging
+import csv
 import os
+import threading
 
 # Configurazione del logging
 logging.basicConfig(level=logging.INFO)
 
-# Funzione per convertire XML di query in JSON e salvare automaticamente il JSON
-def query_xml_to_json(xml_file_path):
-    try:
-        # Leggi il contenuto del file XML
-        with open(xml_file_path, 'r') as xml_file:
-            xml_data = xml_file.read()
+path_xml_dataset = "/datasets/"
 
-        # Parsing dell'XML
-        root = ET.fromstring(xml_data)
+def result_xml_to_csv(xml_file):
+    logging.info(f"Converting {xml_file} to CSV")
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
 
-        # Creazione della lista per i risultati JSON
-        json_outputs = []
+    csv_file = xml_file.replace('.xml', '.csv')
+    with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        
+        # Write CSV header
+        csvwriter.writerow(['content_id', 'answer_id', 'text'])
+        
+        for result in root.findall('.//result'):
+            content_id = result.get('content_id')
+            for answer in result.findall('.//answer'):
+                answer_id = answer.get('id')
+                text = ' '.join(answer.find('text').text.split())
+                csvwriter.writerow([content_id, answer_id, text])
+    
+    logging.info(f"CSV file created: {csv_file}")
 
-        for question in root.find('questions').findall('question'):
-            question_dict = {
-                "id": question.find('id').text,
-                "text": question.find('text').text
-            }
-            json_output = {
-                "xml": {
-                    "question": {
-                        "question": [question_dict]
-                    }
-                }
-            }
-            json_outputs.append(json_output)
+def query_xml_to_csv(xml_file):
+    logging.info(f"Converting {xml_file} to CSV")
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
 
-        # Salvataggio del JSON in un file
-        save_json_to_file(json_outputs, xml_file_path)
+    csv_file = xml_file.replace('.xml', '.csv')
+    with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        
+        # Write CSV header
+        csvwriter.writerow(['id', 'text'])
+        
+        for question in root.findall('.//question'):
+            question_id = question.find('id').text
+            text = question.find('text').text.strip()
+            csvwriter.writerow([question_id, text])
+    
+    logging.info(f"CSV file created: {csv_file}")
 
-        return json_outputs
+def content_xml_to_csv(xml_file):
+    logging.info(f"Converting {xml_file} to CSV")
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
 
-    except Exception as e:
-        logging.error(f"Errore nella conversione: {e}")
-        return None
-
-# Funzione per convertire XML di content in JSON e salvare automaticamente il JSON
-def content_xml_to_json(xml_file_path):
-    try:
-        # Leggi il contenuto del file XML
-        with open(xml_file_path, 'r') as content_file:
-            content_data = content_file.read()
-
-        # Parsing dell'XML
-        root = ET.fromstring(content_data)
-
-        # Creazione della lista per i risultati JSON
-        json_outputs = []
-
-        for item in root.find('search').find('items').findall('item'):
-            item_dict = {
-                "uuid": item.find('uuid').text,
-                "title": item.find('title').text,
-                "abstract": item.find('abstract').text
-            }
-            json_output = {
-                "xml": {
-                    "item": item_dict  # Ogni oggetto è un singolo item
-                }
-            }
-            json_outputs.append(json_output)
-
-        # Salvataggio del JSON in un file
-        save_json_to_file(json_outputs, xml_file_path)
-
-        return json_outputs
-
-    except Exception as e:
-        logging.error(f"Errore nella conversione: {e}")
-        return None
-
-# Funzione per salvare il JSON in un file se diverso dal contenuto esistente
-def save_json_to_file(json_data, xml_file_path):
-    try:
-        # Creazione del percorso per il file JSON
-        json_file_path = os.path.splitext(xml_file_path)[0] + '.json'
-
-        # Leggi il contenuto esistente del file JSON, se presente
-        existing_data_str = None
-        if os.path.exists(json_file_path):
-            with open(json_file_path, 'r') as json_file:
-                existing_data_str = json_file.read()  # Leggi tutto il contenuto come stringa
-
-        # Converti i nuovi dati in una stringa di oggetti separati da newline
-        new_data_lines = [json.dumps(item) for item in json_data]
-
-        # Confronta i dati esistenti con i nuovi dati da scrivere (come stringhe)
-        if existing_data_str != '\n'.join(new_data_lines):
-            # Scrittura del file JSON solo se i dati sono diversi
-            with open(json_file_path, 'w') as json_file:
-                for line in new_data_lines:
-                    json_file.write(line + '\n')  # Scrivi ogni oggetto su una nuova riga
-
-            logging.info(f"File JSON salvato con successo: {json_file_path}")
-        else:
-            logging.info(f"Nessuna modifica necessaria. Il contenuto di {json_file_path} è già aggiornato.")
-
-    except Exception as e:
-        logging.error(f"Errore nel salvataggio del file JSON: {e}")
+    csv_file = xml_file.replace('.xml', '.csv')
+    with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        
+        # Write CSV header
+        csvwriter.writerow(['uuid', 'title', 'abstract'])
+        
+        for item in root.findall('.//item'):
+            uuid = item.find('uuid').text
+            title = ' '.join(item.find('title').text.split())
+            abstract = ' '.join(item.find('abstract').text.split())
+            csvwriter.writerow([uuid, title, abstract])
+    
+    logging.info(f"CSV file created: {csv_file}")
