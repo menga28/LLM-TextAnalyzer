@@ -18,5 +18,4 @@
 - Ottimizzazione per l'analisi su larga scala.
 
 ## Architettura
-![Big data drawio](https://github.com/user-attachments/assets/da3d3589-a9db-4316-bfa5-8e746a430d02)
-
+![Big data drawio](https://github.com/user-attachments/assets/c0172e78-6f93-4f7b-8dda-b71404f0c704)
