@@ -5,45 +5,63 @@ services:
       - "24224:24224"
       - "24224:24224/udp"
     volumes:
-      - ./fluentd/config:/fluentd/etc
-    depends_on:
-      - arangodb
-
-  arangodb:
-    image: arangodb/arangodb:latest
-    ports:
-      - "8529:8529"
+      - ./fluentd/etc:/fluentd/etc
+      - ./fluentd/log:/fluentd/log
+      - ./datasets:/datasets
+      - ./fluentd/scripts:/fluentd/scripts 
     environment:
-      ARANGO_ROOT_PASSWORD: llm_bigdata
-    volumes:
-      - arangodb-data:/var/lib/arangodb3
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    env_file: 
+      - .env
+    depends_on:
+      couchdb:
+        condition: service_healthy
+    command: ["fluentd", "-c", "/fluentd/etc/test2.conf", "-vv"]
     networks:
       - backend
+    restart: on-failure
+
+  couchdb:
+    build: ./couchdb
+    ports:
+      - "5984:5984"
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+    networks:
+      - backend
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 10s
+      retries: 5
 
   spark:
     build: ./spark
     ports:
       - "8080:8080"
     depends_on:
-      - arangodb
+      - couchdb
     networks:
       - backend
 
-  onprem:
-    build: ./onprem 
-    ports:
-      - "8000:8000"  
-    environment:
-      - MODEL_PATH=/datasets/llm_models
+  python-app:
+    build:
+      context: ./app  # Cambia il contesto di build alla cartella app
+      dockerfile: Dockerfile  # Assicurati che il nome del Dockerfile sia corretto
     volumes:
-      - ./datasets/llm_models:/app/datasets/llm_models
+      - ./app:/app  # Monta la cartella app nel container
+      - ./datasets:/datasets
     networks:
       - backend
-    depends_on:
-      - spark
+    restart: always
 
 volumes:
-  arangodb-data:
+  couchdb-data:
     driver: local
 
 networks:
