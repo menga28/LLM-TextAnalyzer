@@ -12,4 +12,4 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Comando di default (da modificare se necessario)
-CMD ["spark-submit", "/app/read_couchdb.py"]
+CMD ["spark-submit", "/app/read_couchdb_structuredstreaming.py"]
