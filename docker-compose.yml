@@ -17,7 +17,7 @@ services:
     depends_on:
       couchdb:
         condition: service_healthy
-    command: ["fluentd", "-c", "/fluentd/etc/test2.conf", "-vv"]
+    command: ["fluentd", "-c", "/fluentd/etc/fluent.conf", "-vv"]
     networks:
       - backend
     restart: on-failure
@@ -44,6 +44,7 @@ services:
     build: ./spark
     ports:
       - "8080:8080"
+      - "4040:4040"
     depends_on:
       couchdb:
         condition: service_healthy

@@ -1,5 +1,4 @@
 
 .env
 *.pyc
-*.ipynb
 /app/__pycache__
