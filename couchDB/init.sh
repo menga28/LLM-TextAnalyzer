@@ -9,6 +9,10 @@ until curl -s -o /dev/null http://$COUCHDB_IP:5984; do
     sleep 10
 done
 
-# Crea il database _users se non esiste
-echo "Creazione del database _paperllm..."
-curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/paperllm || echo "Il database paperllm esiste già."
+# Crea i database se non esistono 
+databases=("paperllm_content" "paperllm_query" "paperllm_result") 
+
+for db in "${databases[@]}"; do 
+    echo "Creazione del database $db..." 
+    curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/$db || echo "Il database $db esiste già." 
+done

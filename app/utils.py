@@ -17,7 +17,8 @@ def result_xml_to_csv(xml_file):
 
     csv_file = xml_file.replace('.xml', '.csv')
     with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
-        csvwriter = csv.writer(csvfile)
+        csvwriter = csv.writer(csvfile, quotechar='"', quoting=csv.QUOTE_ALL)
+        #csvwriter = csv.writer(csvfile)
         
         # Write CSV header
         csvwriter.writerow(['content_id', 'answer_id', 'text'])
@@ -38,7 +39,8 @@ def query_xml_to_csv(xml_file):
 
     csv_file = xml_file.replace('.xml', '.csv')
     with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
-        csvwriter = csv.writer(csvfile)
+        csvwriter = csv.writer(csvfile, quotechar='"', quoting=csv.QUOTE_ALL)
+        #csvwriter = csv.writer(csvfile)
         
         # Write CSV header
         csvwriter.writerow(['id', 'text'])
@@ -57,7 +59,8 @@ def content_xml_to_csv(xml_file):
 
     csv_file = xml_file.replace('.xml', '.csv')
     with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
-        csvwriter = csv.writer(csvfile)
+        csvwriter = csv.writer(csvfile, quotechar='"', quoting=csv.QUOTE_ALL)
+        #csvwriter = csv.writer(csvfile)
         
         # Write CSV header
         csvwriter.writerow(['uuid', 'title', 'abstract'])
