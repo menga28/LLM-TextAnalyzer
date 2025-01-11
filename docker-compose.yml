@@ -44,10 +44,15 @@ services:
     build: ./spark
     ports:
       - "8080:8080"
+      - "4040:4040"
     depends_on:
-      - couchdb
+      couchdb:
+        condition: service_healthy
+    env_file: 
+      - .env
     networks:
       - backend
+    restart: on-failure
 
   python-app:
     build:

@@ -10,7 +10,7 @@ until curl -s -o /dev/null http://$COUCHDB_IP:5984; do
 done
 
 # Crea i database se non esistono 
-databases=("paperllm_content" "paperllm_query" "paperllm_result") 
+databases=("paperllm_content" "paperllm_query" "paperllm_results") 
 
 for db in "${databases[@]}"; do 
     echo "Creazione del database $db..." 
