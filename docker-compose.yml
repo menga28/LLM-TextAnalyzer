@@ -29,6 +29,8 @@ services:
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+      - COUCHDB_CLUSTER_Q=1
+      - COUCHDB_CLUSTER_N=1
     volumes:
       - couchdb-data:/opt/couchdb/data
     networks:
