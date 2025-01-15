@@ -1,5 +1,6 @@
 services:
   fluentd:
+    container_name: llm-fluentd
     build: ./fluentd
     ports:
       - "24224:24224"
@@ -17,18 +18,21 @@ services:
     depends_on:
       couchdb:
         condition: service_healthy
-    command: ["fluentd", "-c", "/fluentd/etc/test2.conf", "-vv"]
+    command: ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf -vv"]
     networks:
       - backend
     restart: on-failure
 
   couchdb:
+    container_name: llm-couchdb
     build: ./couchdb
     ports:
       - "5984:5984"
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+      - COUCHDB_CLUSTER_Q=1
+      - COUCHDB_CLUSTER_N=1
     volumes:
       - couchdb-data:/opt/couchdb/data
     networks:
@@ -41,21 +45,29 @@ services:
       retries: 5
 
   spark:
+    container_name: llm-spark
     build: ./spark
     ports:
       - "8080:8080"
+      - "4040:4040"
     depends_on:
-      - couchdb
+      couchdb:
+        condition: service_healthy
+    env_file: 
+      - .env
     networks:
       - backend
+    restart: on-failure
 
   python-app:
+    container_name: llm-python
     build:
-      context: ./app  # Cambia il contesto di build alla cartella app
-      dockerfile: Dockerfile  # Assicurati che il nome del Dockerfile sia corretto
+      context: ./app  
+      dockerfile: Dockerfile
     volumes:
-      - ./app:/app  # Monta la cartella app nel container
+      - ./app:/app  
       - ./datasets:/datasets
+      - ./onprem/onprem:/app/onprem
     networks:
       - backend
     restart: always
