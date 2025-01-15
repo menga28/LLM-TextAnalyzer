@@ -2,7 +2,7 @@ import logging
 from onprem import LLM
 
 # Configura l'URL del modello LLM
-MODEL_URL = "/app/onprem_data/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+MODEL_URL = "/app/model/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
 
 # Template per il prompt
 TEMPLATE = """
