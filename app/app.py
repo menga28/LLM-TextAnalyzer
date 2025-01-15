@@ -2,8 +2,8 @@ import time
 import logging
 import threading
 from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
-from spark_client import process_with_spark
-from llm_client import process_with_llm
+#from spark_client import process_with_spark
+from llm_service import process_with_llm
 
 # Configura logging
 logging.basicConfig(filename="/logs/app.log", level=logging.INFO, format="%(asctime)s - %(message)s")
@@ -20,7 +20,7 @@ def periodic_call():
     content_xml_to_csv(path_xml_dataset + "content.xml")
 
     # Invia i dati a Spark
-    process_with_spark(path_xml_dataset)
+    #process_with_spark(path_xml_dataset)
     
     # Chiamata a onprem.LLM
     process_with_llm(path_xml_dataset)
@@ -38,3 +38,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # Chiamata al servizio LLM con un prompt di esempio
+    example_prompt = "Write a Python script that returns all file paths from a folder recursively."
+    response = process_with_llm(example_prompt)
+    logging.info(f"Risultato del servizio LLM: {response}")

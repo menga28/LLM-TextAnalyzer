@@ -63,6 +63,7 @@ services:
     volumes:
       - ./app:/app  # Monta la cartella app nel container
       - ./datasets:/datasets
+      - ./onprem/onprem:/onprem
     networks:
       - backend
     restart: always
