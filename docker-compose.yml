@@ -1,4 +1,5 @@
 services:
+
   fluentd:
     container_name: llm-fluentd
     build: ./fluentd
@@ -67,7 +68,7 @@ services:
     volumes:
       - ./app:/app  
       - ./datasets:/datasets
-      - ./onprem/onprem:/app/onprem
+      #- ./onprem/onprem:/app/onprem
     networks:
       - backend
     restart: always

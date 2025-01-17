@@ -1,11 +1,4 @@
 jsonpath-ng
 numpy
-langchain
-langchain_huggingface
-langchain_chroma
-langchain_community
-langchain_openai 
-chromadb
-typing
-syntok
 llama-cpp-python
+onprem
