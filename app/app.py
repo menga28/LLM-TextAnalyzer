@@ -10,6 +10,7 @@ logging.basicConfig(filename="/logs/app.log", level=logging.INFO, format="%(asct
 
 path_xml_dataset = "/datasets/"
 
+prompt = "How i can print in python and in java?"
 
 def periodic_call():
     logging.info("Inizio del processo periodico.")
@@ -23,7 +24,7 @@ def periodic_call():
     #process_with_spark(path_xml_dataset)
     
     # Chiamata a onprem.LLM
-    process_with_llm(path_xml_dataset)
+    logging.info(process_with_llm(prompt))
 
     logging.info("Processo periodico completato.")
     threading.Timer(60, periodic_call).start()
