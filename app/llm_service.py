@@ -41,8 +41,6 @@ def download_model():
         
         logger.info("Model downloaded successfully.")
 
-
-
 def process_with_llm(prompt):
     llm = LLM(model_download_path=MODEL_DIR,
               prompt_template="<s>[INST] {prompt} [/INST]",
@@ -52,7 +50,6 @@ def process_with_llm(prompt):
               verbose=True)
     response = llm.prompt(prompt)
     return response
-
 
 if __name__ == "__main__":
     download_model()
