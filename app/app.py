@@ -6,7 +6,7 @@ from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
 from llm_service import process_with_llm
 
 # Configura logging
-logging.basicConfig(filename="/logs/app.log", level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 path_xml_dataset = "/datasets/"
 
@@ -39,7 +39,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # Chiamata al servizio LLM con un prompt di esempio
-    example_prompt = "Write a Python script that returns all file paths from a folder recursively."
-    response = process_with_llm(example_prompt)
-    logging.info(f"Risultato del servizio LLM: {response}")
