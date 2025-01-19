@@ -1,26 +1,42 @@
 import logging
 import os
 from onprem import LLM
-from tqdm import tqdm
 from utils import download_model
-from config import get_model_by_id, MODEL_DIR
+from config import MODEL_DIR, MODELS
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(filename)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 llm = None
 
+
 def creating_llm(model):
+    global llm
     try:
-        llm = LLM(model_download_path=model["path"],
-                    prompt_template="[INST] {prompt} [/INST]",
-                    confirm=False,
-                    n_gpu_layers=-1,
-                    temperature=0,
-                    verbose=True)
+        download_model(MODEL_DIR, model["path"],
+                       model["url"], model["hash_md5"], 10000)
+        absolute_path = os.path.abspath(model["path"])
+        logger.info(f"Passing model_download_path: {absolute_path}")
+        logger.info(f"Model available at {absolute_path}")
+        logger.info(f"Using prompt template: {model['prompt_template']}")
+        llm = LLM(
+            model_download_path=MODEL_DIR,
+            model_url=model["filename"],
+            prompt_template=model["prompt_template"],
+            embedding_model_kwargs={'device': 'cpu'},
+            confirm=False,
+            n_gpu_layers=-1,
+            n_threads=4,
+            temperature=0,
+            verbose=True)
         logging.info("Modello LLM inizializzato.")
     except Exception as e:
+        logging.error(f"Informazioni attuali del modello: {model}")
         logging.error(f"Errore durante l'inizializzazione del modello: {e}")
+
 
 def process_with_llm(prompt):
     logging.info("Inizio dell'elaborazione del prompt...")
@@ -36,14 +52,17 @@ def process_with_llm(prompt):
         logging.error(f"Errore durante l'elaborazione del prompt: {e}")
         return None
 
+
 def downloading_all_models():
     for model in MODELS:
         try:
-            download_model(MODEL_DIR, model["path"], model["url"], model["hash_md5"])
+            download_model(
+                MODEL_DIR, model["path"], model["url"], model["hash_md5"])
             logger.info(f"Model available at {model['path']}")
         except Exception as e:
             logger.error(f"Error downloading model: {e}")
 
+
 if __name__ == "__main__":
     downloading_all_models()
-    logging.info("Starting application...")
+    logging.info("Starting Onprem Service...")

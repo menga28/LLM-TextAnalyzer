@@ -8,8 +8,10 @@ import requests
 from tqdm import tqdm
 import hashlib
 
-# Configurazione del logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(filename)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 path_xml_dataset = "/datasets/"
@@ -22,6 +24,10 @@ def calculate_md5(file_path, hash_algo='md5'):
     return hash_func.hexdigest()
 
 def download_model(MODEL_DIR, MODEL_PATH, MODEL_URL, EXPECTED_HASH_MD5, MIN_FILE_SIZE):
+    logging.info(f"Checking existence of: {MODEL_PATH}")
+    logging.info(f"Full absolute path: {os.path.abspath(MODEL_PATH)}")
+    logging.info(f"Contents of directory: {os.listdir(MODEL_DIR)}")
+
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
 
@@ -37,24 +43,46 @@ def download_model(MODEL_DIR, MODEL_PATH, MODEL_URL, EXPECTED_HASH_MD5, MIN_FILE
         download_and_save_model(MODEL_URL, MODEL_PATH)
 
 def download_and_save_model(MODEL_URL, MODEL_PATH):
-    """Scarica e salva il modello."""
-    response = requests.get(MODEL_URL, stream=True)
-    response.raise_for_status()
+    logger.info(f"Downloading model from {MODEL_URL} to {MODEL_PATH}...")
 
-    total_size = int(response.headers.get('content-length', 0))
-    with open(MODEL_PATH, "wb") as model_file, tqdm(
-        desc="Downloading",
-        total=total_size,
-        unit="B",
-        unit_scale=True,
-        unit_divisor=1024,
-        ascii=True
-    ) as progress_bar:
-        for chunk in response.iter_content(chunk_size=8192):
-            model_file.write(chunk)
-            progress_bar.update(len(chunk))
+    downloaded_size = 0
+    if os.path.exists(MODEL_PATH):
+        downloaded_size = os.path.getsize(MODEL_PATH)
+        logger.info(f"Found partial file: {MODEL_PATH}, size: {downloaded_size} bytes")
+    
+    response = requests.head(MODEL_URL)
+    #logger.info(f"Response headers: {response.headers}\n\n")
+    total_size = int(response.headers.get('X-Linked-Size', 0))
 
+    if downloaded_size >= total_size:
+        logger.info(f"File already fully downloaded: {MODEL_PATH}, model actual size {downloaded_size} of {total_size} bytes")
+        return
+
+    headers = {"Range": f"bytes={downloaded_size}-"}
+    with requests.get(MODEL_URL, headers=headers, stream=True) as response:
+        response.raise_for_status()
+        total_remaining = int(response.headers.get('content-length', 0))
+        
+        with open(MODEL_PATH, "ab") as model_file, tqdm(
+            desc="Downloading",
+            initial=downloaded_size,
+            total=total_size,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            ascii=True
+        ) as progress_bar:
+            i = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                model_file.write(chunk)
+                progress = progress_bar.update(len(chunk))
+                if progress is not None and progress != 0 and i > 2500:
+                    logger.info(progress_bar.update(len(chunk)))
+                    i = 0
+                else:
+                    i += 1 
     logging.info("Model downloaded successfully.")
+
 
 def result_xml_to_csv(xml_file):
     logging.info(f"Converting {xml_file} to CSV")

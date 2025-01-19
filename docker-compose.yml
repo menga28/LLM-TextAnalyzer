@@ -71,6 +71,12 @@ services:
       #- ./onprem/onprem:/app/onprem
     networks:
       - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '4'  
+        reservations:
+          cpus: '2' 
     restart: always
 
 volumes:
