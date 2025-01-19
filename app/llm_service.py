@@ -3,25 +3,16 @@ import os
 from onprem import LLM
 from tqdm import tqdm
 from utils import download_model
+from config import get_model_by_id, MODEL_DIR
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-MODEL_URL = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-MODEL_DIR = "/app/llm_model"
-MODELS = [
-    {
-        "path": os.path.join(MODEL_DIR, "mistral-7b-instruct-v0.2.Q4_K_M.gguf"),
-        "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-        "hash_md5": "d98804ecfe3f274b46aed70d9257945e"
-    }
-]
-
 llm = None
 
-if llm is None:
+def creating_llm(model):
     try:
-        llm = LLM(model_download_path=MODEL_DIR,
+        llm = LLM(model_download_path=model["path"],
                     prompt_template="[INST] {prompt} [/INST]",
                     confirm=False,
                     n_gpu_layers=-1,

@@ -3,18 +3,19 @@ import logging
 import threading
 from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
 #from spark_client import process_with_spark
-from llm_service import process_with_llm
+from llm_service import process_with_llm, creating_llm
+from config import get_model_by_id, MODEL_DIR
+from utils import download_model
 
 # Configura logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 path_xml_dataset = "/datasets/"
-
+model = get_model_by_id("llama-3.2-3b")
 prompt = "How i can print in python and in java?"
 
 def periodic_call():
     logging.info("Inizio del processo periodico.")
-    
     # Converti XML in CSV
     query_xml_to_csv(path_xml_dataset + "query.xml")
     result_xml_to_csv(path_xml_dataset + "result.xml")
@@ -36,6 +37,24 @@ def main():
     while True:
         time.sleep(1)
 
+def initialize_model(model):
+    try:
+        download_model(
+            MODEL_DIR=MODEL_DIR,
+            MODEL_PATH=model["path"],
+            MODEL_URL=model["url"],
+            EXPECTED_HASH_MD5=model["hash_md5"],
+            MIN_FILE_SIZE=100000000
+    )
+        creating_llm(model)
+        logging.info(f"Model {model['id']} initialized successfully.")
+    except ValueError as e:
+        logging.error(f"Model initialization error: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"Unexpected error during model initialization: {e}")
+        raise
 
 if __name__ == "__main__":
+    initialize_model(model)
     main()
