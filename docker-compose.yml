@@ -51,6 +51,8 @@ services:
     ports:
       - "8080:8080"
       - "4040:4040"
+    volumes:
+      - ./spark:/spark
     depends_on:
       couchdb:
         condition: service_healthy
