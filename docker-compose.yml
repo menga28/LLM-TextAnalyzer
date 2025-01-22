@@ -62,14 +62,15 @@ services:
       - backend
     restart: on-failure
 
-  python-app:
-    container_name: llm-python
+  app:
+    container_name: llm-app
     build:
       context: ./app  
       dockerfile: Dockerfile
     volumes:
       - ./app:/app  
-      - ./datasets:/datasets
+      - ./datasets:/app/datasets
+      - ./datasets/llm_model:/app/llm_model
       #- ./onprem/onprem:/app/onprem
     networks:
       - backend

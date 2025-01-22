@@ -4,8 +4,8 @@ import threading
 from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
 #from spark_client import process_with_spark
 from llm_service import process_with_llm, creating_llm
-from config import get_model_by_id, MODEL_DIR
-from utils import download_model
+from config import get_model_by_id, MODEL_DIR, ACTUAL_MODEL
+from utils import downloading_all_models
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 path_xml_dataset = "/datasets/"
-model = get_model_by_id("llama-3.2-3b")
+model = get_model_by_id(ACTUAL_MODEL)
 prompt = "How i can print in python and in java?"
 
 def periodic_call():
@@ -53,5 +53,6 @@ def initialize_model(model):
         raise
 
 if __name__ == "__main__":
+    downloading_all_models()
     initialize_model(model)
     main()

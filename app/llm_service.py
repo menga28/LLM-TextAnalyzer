@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 llm = None
 
-
 def creating_llm(model):
     global llm
     try:
@@ -28,15 +27,18 @@ def creating_llm(model):
             prompt_template=model["prompt_template"],
             embedding_model_kwargs={'device': 'cpu'},
             confirm=False,
-            n_gpu_layers=-1,
-            n_threads=4,
-            temperature=0,
+            n_gpu_layers=40,
+            n_threads=8,
+            temperature=0.01,
+            max_tokens=300,
+            stop=["\n"],
+            use_mlock=True,
+            use_mmap=True,
             verbose=True)
         logging.info("Modello LLM inizializzato.")
     except Exception as e:
         logging.error(f"Informazioni attuali del modello: {model}")
         logging.error(f"Errore durante l'inizializzazione del modello: {e}")
-
 
 def process_with_llm(prompt):
     logging.info("Inizio dell'elaborazione del prompt...")
@@ -51,17 +53,6 @@ def process_with_llm(prompt):
     except Exception as e:
         logging.error(f"Errore durante l'elaborazione del prompt: {e}")
         return None
-
-
-def downloading_all_models():
-    for model in MODELS:
-        try:
-            download_model(
-                MODEL_DIR, model["path"], model["url"], model["hash_md5"])
-            logger.info(f"Model available at {model['path']}")
-        except Exception as e:
-            logger.error(f"Error downloading model: {e}")
-
 
 if __name__ == "__main__":
     downloading_all_models()
