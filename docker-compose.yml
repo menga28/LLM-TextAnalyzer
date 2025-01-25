@@ -70,7 +70,7 @@ services:
     volumes:
       - ./app:/app  
       - ./datasets:/app/datasets
-      - ./datasets/llm_model:/app/llm_model
+      # - ./datasets/llm_model:/app/llm_model
       #- ./onprem/onprem:/app/onprem
     networks:
       - backend

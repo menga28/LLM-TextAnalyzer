@@ -34,14 +34,14 @@ def downloading_all_models():
             logger.error(f"Error downloading model: {e}")
 
 def download_model(model_dir: str, model_path: str, model_url: str, expected_hash_md5: str, min_file_size: int = 2*1024*1024*1024):
-    # logging.info(f"Checking existence of: {MODEL_PATH}")
-    # logging.info(f"Full absolute path: {os.path.abspath(MODEL_PATH)}")
-    logging.info(f"Contents of directory: {os.listdir(model_dir)}")
-
-    if os.path.exists(model_path) and os.path.getsize(model_path) >= min_file_size or expected_hash_md5 == calculate_md5(model_path):
-        logging.info(f"Model at {model_path} already exists and is valid ({os.path.getsize(model_path)} bytes). No need to download.")
+    if os.path.exists(model_path):
+        valid_size = os.path.getsize(model_path) >= min_file_size
+        valid_hash = calculate_md5(model_path) == expected_hash_md5
+        if valid_hash and valid_size:
+            logging.info(f"Model at {model_path} already exists...")
+            return
     else:
-        logging.info(f"Model does not exist or is invalid. Downloading model from {model_url}...")
+        logging.info(f"Model does not exist. Downloading...")
         download_and_save_model(model_url, model_path)
 
 def download_and_save_model(model_url, model_path):

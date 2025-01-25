@@ -1,7 +1,7 @@
 import logging
 import os
 from onprem import LLM
-from utils import download_model
+from utils import download_model, downloading_all_models
 from config import MODEL_DIR, MODELS
 
 logging.basicConfig(
