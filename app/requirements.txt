@@ -2,3 +2,4 @@ jsonpath-ng
 numpy
 llama-cpp-python
 onprem
+flask

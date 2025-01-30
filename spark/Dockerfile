@@ -16,4 +16,4 @@ COPY . /spark/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Comando di default (da modificare se necessario)
-CMD ["spark-submit", "/spark/app/readcouchdb_changesfeed.py"]
+CMD ["spark-submit", "/spark/app/spark_processes.py"]

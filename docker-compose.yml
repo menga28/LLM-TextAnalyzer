@@ -21,7 +21,7 @@ services:
         condition: service_healthy
     command: ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf -vv"]
     networks:
-      - backend
+      - app_network
     restart: on-failure
 
   couchdb:
@@ -37,7 +37,7 @@ services:
     volumes:
       - couchdb-data:/opt/couchdb/data
     networks:
-      - backend
+      - app_network
     env_file:
       - .env
     healthcheck:
@@ -56,10 +56,12 @@ services:
     depends_on:
       couchdb:
         condition: service_healthy
+      app:
+        condition: service_started  
     env_file: 
       - .env
     networks:
-      - backend
+      - app_network
     restart: on-failure
 
   app:
@@ -72,8 +74,10 @@ services:
       - ./datasets:/app/datasets
       # - ./datasets/llm_model:/app/llm_model
       #- ./onprem/onprem:/app/onprem
+    environment:
+      - MODEL_DIR=/datasets/llm_model
     networks:
-      - backend
+      - app_network
     deploy:
       resources:
         limits:
@@ -81,11 +85,13 @@ services:
         reservations:
           cpus: '2' 
     restart: always
+    ports:
+      - "5000:5000"
 
 volumes:
   couchdb-data:
     driver: local
 
 networks:
-  backend:
+  app_network:
     driver: bridge
