@@ -24,9 +24,6 @@ model = get_model_by_id(ACTUAL_MODEL)
 # Creazione del server Flask
 app = Flask(__name__)
 
-
-prompt = "How i can print in python and in java?"
-
 def periodic_call():
     """
     Processo periodico per testare funzionalità e inviare richieste al modello.
