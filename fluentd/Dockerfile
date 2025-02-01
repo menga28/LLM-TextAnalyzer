@@ -24,4 +24,4 @@ RUN chmod +x /fluentd/scripts/filemonitoring_fluentd.sh
 #CMD ["fluentd", "-c", "/fluentd/etc/fluent.conf"]
 
 # Command to run Fluentd with monitoring script 
-CMD ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf -vv"]
+CMD ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"]

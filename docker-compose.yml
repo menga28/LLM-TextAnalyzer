@@ -14,12 +14,13 @@ services:
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+      - FLUENTD_OPT="--log-level info"
     env_file: 
       - .env
     depends_on:
       couchdb:
         condition: service_healthy
-    command: ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf -vv"]
+    command: ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"]
     networks:
       - app_network
     restart: on-failure
