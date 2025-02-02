@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt /app/
-RUN python -m pip install --upgrade pip && pip install --use-feature=fast-deps -r requirements.txt
+RUN python -m pip install --upgrade pip && pip install --use-feature=fast-deps --no-cache-dir -r requirements.txt
 
 COPY . /app/
 

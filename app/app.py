@@ -1,6 +1,7 @@
 import time
 import logging
 import threading
+import os
 from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
 # from spark_client import process_with_spark
 from llm_service import process_with_llm, creating_llm
@@ -14,7 +15,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-path_xml_dataset = "/datasets/"
+path_xml_dataset = "/app/datasets/"
+path_xml_dataset = os.path.join("datasets")
 
 model = get_model_by_id(ACTUAL_MODEL)
 
@@ -26,13 +28,11 @@ def periodic_call():
     Processo periodico per testare funzionalità e inviare richieste al modello.
     """
     logging.info("Inizio del processo periodico.")
-    query_xml_to_csv(path_xml_dataset + "query.xml")
-    result_xml_to_csv(path_xml_dataset + "result.xml")
-    content_xml_to_csv(path_xml_dataset + "content.xml")
+    query_xml_to_csv(os.path.join(path_xml_dataset,"query.xml"))
+    result_xml_to_csv(os.path.join(path_xml_dataset, "result.xml"))
+    content_xml_to_csv(os.path.join(path_xml_dataset,"content.xml"))
 
-    # process_with_spark(path_xml_dataset)
-    # response = process_with_llm(prompt)
-    # logging.info(f"Risposta da OnPrem.LLM: {response}")
+    # process_with_spark(path_xml_dataset) 
 
     logging.info("Processo periodico completato.\n")
 
@@ -60,8 +60,7 @@ def process_prompt():
 
     logging.ingo(prompt)
 
-    # response = process_with_llm(prompt)
-    response = "a"
+    response = process_with_llm(prompt)
 
     if response is None:
         return jsonify({'error': 'Errore durante l\'elaborazione del prompt'}), 500
@@ -87,8 +86,8 @@ def main():
     Avvio dell'applicazione.
     """
     logging.info("Applicazione avviata.")
-    # periodic_call() # Avvia il processo periodico
-    app.run(host='0.0.0.0', port=5000)
+    periodic_call() # Avvia il processo periodico
+    # app.run(host='0.0.0.0', port=5000)
 
 
 def initialize_model(model):

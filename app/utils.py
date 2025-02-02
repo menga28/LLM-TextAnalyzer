@@ -15,8 +15,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-path_xml_dataset = "/datasets/"
-
 def calculate_md5(file_path: str, hash_algo='md5'):
     hash_func = hashlib.new(hash_algo)
     with open(file_path, 'rb') as file:
