@@ -28,54 +28,73 @@ import time
 import requests
 import time
 
-def send_to_onprem_llm(query, abstract, max_retries=10, wait_time=5, timeout=90):
+def get_available_models():
     """
-    Invia una query e un abstract a OnPremLLM e restituisce la risposta.
-    Se OnPremLLM non è ancora pronto, riprova fino a `max_retries`.
+    Recupera la lista dei modelli disponibili dall'App via API.
+    """
+    url = "http://app:5000/models"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("models", [])
+        else:
+            logger.error(f"Errore nel recupero dei modelli: {response.status_code} {response.text}")
+            return []
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Errore nella richiesta dei modelli: {e}")
+        return []
+
+def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, timeout=90):
+    """
+    Invia una query e un abstract a OnPremLLM specificando il modello.
     """
     url = "http://app:5000/process"
     payload = {
-    "query": query,
-    "abstract": abstract
+        "query": query,
+        "abstract": abstract,
+        "model_id": model_id  # ✅ Specifica quale modello usare
     }
 
     for attempt in range(max_retries):
         try:
             start_time = time.time()
-            logger.info(f"📤 Invio richiesta a OnPremLLM con query='{query[:50]}...' e abstract='{abstract[:50]}...'")
+            logger.info(f"📤 [{model_id}] Invio richiesta a OnPremLLM...")
             response = requests.post(url, json=payload, timeout=timeout)
-            elapsed_time = time.time() - start_time  # Tempo di esecuzione della richiesta
+            elapsed_time = time.time() - start_time  
 
             if response.status_code == 200:
-                logger.info(f"✅ OnPremLLM ha risposto in {elapsed_time:.2f}s.")
+                logger.info(f"✅ [{model_id}] OnPremLLM ha risposto in {elapsed_time:.2f}s.")
                 return response.json().get('response', "No response")
             else:
-                logger.error(f"Errore API OnPremLLM: {response.status_code} {response.text}")
+                logger.error(f"❌ [{model_id}] Errore API OnPremLLM: {response.status_code} {response.text}")
                 return None
         except requests.exceptions.ConnectionError:
-            logger.warning(f"⚠️ OnPremLLM non disponibile (tentativo {attempt + 1}/{max_retries}). Riprovo tra {wait_time}s...")
+            logger.warning(f"⚠️ [{model_id}] OnPremLLM non disponibile (tentativo {attempt + 1}/{max_retries}). Riprovo...")
             time.sleep(wait_time)
         except requests.exceptions.ReadTimeout:
-            logger.error(f"❌ Timeout di {timeout}s superato. OnPremLLM potrebbe essere lento. Riprovo tra {wait_time}s...")
+            logger.error(f"❌ [{model_id}] Timeout di {timeout}s superato.")
             time.sleep(wait_time)
 
-    logger.error("❌ OnPremLLM non raggiungibile dopo diversi tentativi.")
+    logger.error(f"❌ [{model_id}] OnPremLLM non raggiungibile dopo {max_retries} tentativi.")
     return None
 
 def process_queries_with_abstracts():
     """
-    Esegue le query sugli abstract e invia i dati a OnPremLLM.
+    Esegue le query su ogni abstract con ogni modello disponibile.
     """
     try:
         logger.info("🔵 2. Elaborazione delle query con OnPremLLM...")
 
-        # ✅ Recupera le query dal database paperllm_query
+        models = get_available_models()  # ✅ Recupera i modelli disponibili via API
+        if not models:
+            logger.error("❌ Nessun modello disponibile per eseguire le query.")
+            return
+
         query_df = spark.sql("""
             SELECT _id AS query_id, text AS query_text, updated_at AS query_updated_at
             FROM changes_couchdb_documents_paperllm_query
         """)
 
-        # ✅ Recupera gli abstract dal database paperllm_content
         content_df = spark.sql("""
             SELECT _id AS content_id, title, abstract AS content_text, updated_at AS content_updated_at
             FROM changes_couchdb_documents_paperllm_content
@@ -85,23 +104,22 @@ def process_queries_with_abstracts():
             logger.info("⚠️ Nessuna nuova query o abstract trovati.")
             return
         
-        # ✅ Esegui il cross join per combinare ogni query con ogni abstract
         query_content_pairs = query_df.crossJoin(content_df)
 
         num_processed = 0
         for row in query_content_pairs.collect():
             query_id = row["query_id"]
-            query_text = row["query_text"]  # ✅ Usa il nome corretto della colonna
+            query_text = row["query_text"]
             content_id = row["content_id"]
-            abstract_text = row["content_text"]  # ✅ Usa il nome corretto della colonna
+            abstract_text = row["content_text"]
 
-            logger.info(f"📝 Elaborazione query_id={query_id} con content_id={content_id}")
+            for model_id in models:  # ✅ Itera su ogni modello disponibile
+                logger.info(f"📝 [{model_id}] Elaborazione query_id={query_id} con content_id={content_id}")
 
-            # ✅ Chiama OnPremLLM con query e abstract
-            response = send_to_onprem_llm(query_text, abstract_text)
-            if response:
-                save_result_to_couchdb(query_id, content_id, response, row["query_updated_at"], row["content_updated_at"])
-                num_processed += 1
+                response = send_to_onprem_llm(query_text, abstract_text, model_id)
+                if response:
+                    save_result_to_couchdb(query_id, content_id, response, row["query_updated_at"], row["content_updated_at"], model_id)
+                    num_processed += 1
 
         logger.info(f"🟢 {num_processed} nuove query processate.")
 

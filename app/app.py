@@ -2,11 +2,9 @@ import time
 import logging
 import threading
 import os
+import requests
 from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
 # from spark_client import process_with_spark
-from llm_service import process_with_llm, creating_llm
-from config import get_model_by_id, MODEL_DIR, ACTUAL_MODEL
-from utils import downloading_all_models
 from flask import Flask, request, jsonify
 
 logging.basicConfig(
@@ -18,10 +16,8 @@ logger = logging.getLogger(__name__)
 path_xml_dataset = "/app/datasets/"
 path_xml_dataset = os.path.join("datasets")
 
-model = get_model_by_id(ACTUAL_MODEL)
-
 app = Flask(__name__)
-
+ONPREM_LLM_URL = "http://onprem:5001"
 
 def periodic_call():
     """
@@ -38,75 +34,29 @@ def periodic_call():
 
     threading.Timer(60, periodic_call).start()
 
-
-@app.route('/process', methods=['POST'])
-def process_prompt():
-    """
-    Endpoint REST per elaborare una query con un abstract.
-    Riceve una query e un abstract in JSON e restituisce la risposta dell'LLM.
-    """
-    data = request.get_json()
-
-    logger.info(f"📥 Ricevuto payload API: {data}")
-
-    if not data or 'query' not in data or 'abstract' not in data:
-        logger.error(f"❌ Errore: Payload JSON non valido - {data}")
-        return jsonify({'error': 'I campi "query" e "abstract" sono obbligatori'}), 400
-
-    query = data['query']
-    abstract = data['abstract']
-
-    prompt = f"Domanda: {query}\n\nAbstract:\n{abstract}\n\nRisposta:"
-
-    logging.ingo(prompt)
-
-    response = process_with_llm(prompt)
-
-    if response is None:
-        return jsonify({'error': 'Errore durante l\'elaborazione del prompt'}), 500
-
-    return jsonify({'response': response})
-
-
 @app.route('/status', methods=['GET'])
 def status():
     """
-    Endpoint REST per controllare lo stato del server e del modello.
+    Controlla lo stato del server e del modello.
     """
-    status_info = {
-        'status': 'ok',
-        'model': model['id'],
-        'message': 'Il server è attivo e pronto a rispondere ai prompt.'
-    }
-    return jsonify(status_info)
-
+    try:
+        response = requests.get(f"{ONPREM_LLM_URL}/status", timeout=5)
+        return response.json()
+    except requests.exceptions.RequestException:
+        return jsonify({"status": "error", "message": "OnPremLLM non raggiungibile."})
 
 def main():
     """
-    Avvio dell'applicazione.
+    Avvia il server Flask e il processo periodico in un thread separato.
     """
-    logging.info("Applicazione avviata.")
-    periodic_call() # Avvia il processo periodico
-    # app.run(host='0.0.0.0', port=5000)
+    logging.info("🚀 Avvio di llm-app...")
+    
+    # Avvia periodic_call() in un thread separato
+    thread = threading.Thread(target=periodic_call, daemon=True)
+    thread.start()
 
-
-def initialize_model(model):
-    """
-    Inizializza il modello selezionato.
-    """
-    try:
-        logging.info(f"Model selected: {model}\n")
-        creating_llm(model)
-        logging.info(f"Model {model['id']} initialized successfully.")
-    except ValueError as e:
-        logging.error(f"Model initialization error: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"Unexpected error during model initialization: {e}")
-        raise
-
+    # Avvia il server Flask
+    app.run(host='0.0.0.0', port=5000)
 
 if __name__ == "__main__":
-    # downloading_all_models()
-    # initialize_model(model)
     main()

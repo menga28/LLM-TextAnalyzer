@@ -1,0 +1,6 @@
+numpy
+llama-cpp-python
+onprem
+flask
+requests
+tqdm

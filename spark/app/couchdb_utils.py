@@ -41,25 +41,23 @@ def get_changes_from_couchdb(db_name, since_seq):
         logger.error("Dettagli dell'errore:\n" + traceback.format_exc())
         return [], since_seq
 
-def save_result_to_couchdb(query_id, content_id, response, query_updated_at, content_updated_at):
+def save_result_to_couchdb(query_id, content_id, response, query_updated_at, content_updated_at, model_id):
     """
-    Salva il risultato della query su CouchDB nel database 'results'.
+    Salva il risultato in CouchDB, includendo il modello utilizzato.
     """
-    try:
-        couch_server = Server(couchdb_url_with_credentials)
-        couch_db = couch_server["paperllm_results"]
-        
-        result_doc = {
-            "_id": f"{content_id}_{query_id}",
-            "query_id": query_id,
-            "content_id": content_id,
-            "response": response,
-            "query_updated_at": query_updated_at,
-            "content_updated_at": content_updated_at
-        }
-        
-        couch_db.save(result_doc)
-        logger.info(f"Risultato salvato in CouchDB: {result_doc['_id']}")
-    
-    except Exception as e:
-        logger.error(f"Errore nel salvataggio del risultato su CouchDB: {e}")
+    couch_server = Server(couchdb_url_with_credentials)
+    couch_db = couch_server["paperllm_results"]
+
+    doc_id = f"{content_id}_{query_id}_{model_id}"  # ✅ Aggiunto model_id all'ID
+    doc = {
+        "_id": doc_id,
+        "query_id": query_id,
+        "content_id": content_id,
+        "response": response,
+        "query_updated_at": query_updated_at,
+        "content_updated_at": content_updated_at,
+        "model_id": model_id  # ✅ Salviamo il modello usato
+    }
+
+    couch_db.save(doc)
+    logger.info(f"✅ Risultato salvato in CouchDB: {doc_id}")
