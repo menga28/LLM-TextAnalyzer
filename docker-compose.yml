@@ -89,9 +89,9 @@ services:
       args:
         BUILDKIT_INLINE_CACHE: "1"
     volumes:
-      - ./datasets:/app/datasets:ro
-    environment:
-      - MODEL_DIR=/datasets/llm_model
+      - ./app:/app
+      # - ./datasets/llm_model:/app/llm_model
+      #- ./onprem/onprem:/app/onprem
     networks:
       - app_network
     deploy:
@@ -112,10 +112,16 @@ services:
     build:
       context: ./onprem
       dockerfile: Dockerfile
-      cache_from:
-        - onprem_cache
-      args:
-        BUILDKIT_INLINE_CACHE: "1"
+    volumes:
+      - ./onprem:/onprem  
+      - ./datasets:/datasets
+      #- ./datasets/llm_model:/datasets
+    environment:
+      - MODEL_DIR=/datasets/llm_model
+    cache_from:
+      - onprem_cache
+    args:
+      BUILDKIT_INLINE_CACHE: "1"
     ports:
       - "5001:5001"
     depends_on:

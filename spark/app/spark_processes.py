@@ -30,9 +30,9 @@ import time
 
 def get_available_models():
     """
-    Recupera la lista dei modelli disponibili dall'App via API.
+    Recupera la lista dei modelli disponibili da OnPrem via API.
     """
-    url = "http://app:5000/models"
+    url = "http://onprem:5001/models"
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
@@ -48,11 +48,10 @@ def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, t
     """
     Invia una query e un abstract a OnPremLLM specificando il modello.
     """
-    url = "http://app:5000/process"
+    url = "http://onprem:5001/infer"
     payload = {
-        "query": query,
-        "abstract": abstract,
-        "model_id": model_id  # ✅ Specifica quale modello usare
+        "model_id": model_id,
+        "prompt": f"{query}\n\nAbstract: {abstract}"
     }
 
     for attempt in range(max_retries):
@@ -134,7 +133,7 @@ def process_changes():
     schemas = {
         "paperllm_content": "`_id` STRING, `title` STRING, `abstract` STRING, `updated_at` STRING",
         "paperllm_query": "`_id` STRING, `text` STRING, `updated_at` STRING",
-        "paperllm_results": "`_id` STRING, `query_id` STRING, `content_id` STRING, `response` STRING, `query_updated_at` STRING, `content_updated_at` STRING"
+        "paperllm_results": "`_id` STRING, `query_id` STRING, `content_id` STRING, `response` STRING, `query_updated_at` STRING, `content_updated_at` STRING, `model_id` STRING"
     }
 
     for db_name in last_seq_ids.keys():
@@ -144,13 +143,10 @@ def process_changes():
             documents = [change['doc'] for change in valid_changes if 'doc' in change]
             df = spark.createDataFrame(documents)
         else:
-            # ✅ Se non ci sono nuovi documenti, creiamo una tabella vuota con lo schema corretto
             df = spark.createDataFrame([], schema=schemas[db_name])
 
         df.createOrReplaceTempView(f"changes_couchdb_documents_{db_name}")
         logger.info(f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
-
-        last_seq_ids[db_name] = new_last_seq  # Aggiorna la sequenza
 
 # ✅ **Unico ciclo principale**
 while True:

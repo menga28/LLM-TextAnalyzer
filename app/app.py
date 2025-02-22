@@ -52,8 +52,8 @@ def main():
     logging.info("🚀 Avvio di llm-app...")
     
     # Avvia periodic_call() in un thread separato
-    thread = threading.Thread(target=periodic_call, daemon=True)
-    thread.start()
+    #thread = threading.Thread(target=periodic_call, daemon=True)
+    #thread.start()
 
     # Avvia il server Flask
     app.run(host='0.0.0.0', port=5000)
