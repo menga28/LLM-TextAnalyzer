@@ -2,32 +2,40 @@ services:
 
   fluentd:
     container_name: llm-fluentd
-    build: ./fluentd
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
+    build:
+      context: ./fluentd
+      cache_from:
+        - fluentd_cache
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     volumes:
-      - ./fluentd/etc:/fluentd/etc
+      - ./fluentd/etc:/fluentd/etc:ro
       - ./fluentd/log:/fluentd/log
-      - ./datasets:/datasets
-      - ./fluentd/scripts:/fluentd/scripts 
+      - ./datasets:/datasets:ro
+      - ./fluentd/scripts:/fluentd/scripts
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
       - FLUENTD_OPT="--log-level info"
-    env_file: 
+    env_file:
       - .env
     depends_on:
       couchdb:
         condition: service_healthy
-    command: ["/bin/bash", "-c", "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"]
+    command: >
+      bash -c "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"
     networks:
       - app_network
     restart: on-failure
 
   couchdb:
     container_name: llm-couchdb
-    build: ./couchdb
+    build:
+      context: ./couchdb
+      cache_from:
+        - couchdb_cache
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     ports:
       - "5984:5984"
     environment:
@@ -45,21 +53,27 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
       interval: 10s
       retries: 5
+    restart: always
 
   spark:
     container_name: llm-spark
-    build: ./spark
+    build:
+      context: ./spark
+      cache_from:
+        - spark_cache
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     ports:
       - "8080:8080"
       - "4040:4040"
     volumes:
-      - ./spark:/spark
+      - ./spark:/spark:ro
     depends_on:
       couchdb:
         condition: service_healthy
       app:
-        condition: service_started  
-    env_file: 
+        condition: service_started
+    env_file:
       - .env
     networks:
       - app_network
@@ -68,13 +82,14 @@ services:
   app:
     container_name: llm-app
     build:
-      context: ./app  
+      context: ./app
       dockerfile: Dockerfile
+      cache_from:
+        - app_cache
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     volumes:
-      - ./app:/app  
-      - ./datasets:/app/datasets
-      # - ./datasets/llm_model:/app/llm_model
-      #- ./onprem/onprem:/app/onprem
+      - ./datasets:/app/datasets:ro
     environment:
       - MODEL_DIR=/datasets/llm_model
     networks:
@@ -82,9 +97,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'  
+          cpus: '4'
         reservations:
-          cpus: '2' 
+          cpus: '2'
     restart: always
     ports:
       - "5000:5000"
@@ -95,8 +110,12 @@ services:
   onprem:
     container_name: llm-onprem
     build:
-      context: ./onprem  
+      context: ./onprem
       dockerfile: Dockerfile
+      cache_from:
+        - onprem_cache
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     ports:
       - "5001:5001"
     depends_on:
@@ -109,6 +128,7 @@ services:
       interval: 10s
       retries: 5
       start_period: 10s
+    restart: always
 
 volumes:
   couchdb-data:

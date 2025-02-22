@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y \
+# Installiamo solo i pacchetti necessari e li rimuoviamo dopo
+RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         cmake \
         curl \
@@ -8,13 +9,21 @@ RUN apt-get update && apt-get install -y \
         gcc \
         git \
         libopenblas-openmp-dev \
-        && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Copiamo solo requirements.txt per mantenere la cache della dipendenza
 COPY requirements.txt /app/
-RUN python -m pip install --upgrade pip && pip install --use-feature=fast-deps --no-cache-dir -r requirements.txt
 
+# Aggiorniamo pip e installiamo le dipendenze in un layer separato
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copiamo il resto del codice solo dopo aver installato le dipendenze
 COPY . /app/
+
+# Assicuriamoci che lo script sia eseguibile (se necessario)
+RUN chmod +x /app/app.py
 
 CMD ["python", "app.py"]

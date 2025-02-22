@@ -33,7 +33,7 @@ system_databases=("_users" "_replicator" "_global_changes")
 
 for db in "${system_databases[@]}"; do
     echo "Creazione del database di sistema $db..."
-    curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/$db || echo "Il database di sistema $db esiste già."
+    curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/$db?q=1 || echo "Il database di sistema $db esiste già."
 done
 
 # Crea i database personalizzati se non esistono
@@ -41,7 +41,7 @@ custom_databases=("paperllm_content" "paperllm_query" "paperllm_results")
 
 for db in "${custom_databases[@]}"; do
     echo "Creazione del database $db..."
-    curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/$db || echo "Il database $db esiste già."
+    curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$COUCHDB_IP:5984/$db?q=1 || echo "Il database $db esiste già."
 done
 
 echo "Inizializzazione completata!"
