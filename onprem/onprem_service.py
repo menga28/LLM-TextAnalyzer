@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 # Modello attualmente in memoria
 current_model = None
+model_loaded = False
+
 
 @app.route('/infer', methods=['POST'])
 def infer():
@@ -27,11 +29,13 @@ def infer():
         logger.info(f"🔄 Cambio modello in memoria: {model_id}")
         load_model(model_id)
         current_model = model_id
+        model_loaded = True
 
     # Esegui il prompt
     response = process_with_llm(prompt)
-    
+
     return jsonify({"response": response})
+
 
 @app.route('/models', methods=['GET'])
 def get_models():
@@ -40,9 +44,19 @@ def get_models():
     """
     return jsonify({"models": [model["id"] for model in MODELS]})
 
+
 @app.route('/status', methods=['GET'])
 def status():
-    return jsonify({"status": "ok", "message": "OnPremLLM è attivo"}), 200
+    """
+    Restituisce lo stato del servizio:
+    - "ok" se il modello è caricato
+    - "loading" se il modello non è ancora caricato
+    """
+    if model_loaded:
+        return jsonify({"status": "ok", "message": "OnPremLLM è attivo e il modello è caricato"}), 200
+    else:
+        return jsonify({"status": "loading", "message": "OnPremLLM è in fase di caricamento"}), 503
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)

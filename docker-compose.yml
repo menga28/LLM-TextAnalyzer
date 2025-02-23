@@ -4,23 +4,15 @@ services:
     container_name: llm-fluentd
     build:
       context: ./fluentd
-      cache_from:
-        - fluentd_cache
-      args:
-        BUILDKIT_INLINE_CACHE: "1"
     volumes:
       - ./fluentd/etc:/fluentd/etc:ro
       - ./fluentd/log:/fluentd/log
       - ./datasets:/datasets:ro
       - ./fluentd/scripts:/fluentd/scripts
-    environment:
-      - COUCHDB_USER=${COUCHDB_USER}
-      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
-      - FLUENTD_OPT="--log-level info"
     env_file:
       - .env
     depends_on:
-      couchdb:
+      onprem:
         condition: service_healthy
     command: >
       bash -c "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"
@@ -32,23 +24,14 @@ services:
     container_name: llm-couchdb
     build:
       context: ./couchdb
-      cache_from:
-        - couchdb_cache
-      args:
-        BUILDKIT_INLINE_CACHE: "1"
     ports:
       - "5984:5984"
-    environment:
-      - COUCHDB_USER=${COUCHDB_USER}
-      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
-      - COUCHDB_CLUSTER_Q=1
-      - COUCHDB_CLUSTER_N=1
+    env_file:
+      - .env
     volumes:
       - couchdb-data:/opt/couchdb/data
     networks:
       - app_network
-    env_file:
-      - .env
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
       interval: 10s
@@ -59,20 +42,15 @@ services:
     container_name: llm-spark
     build:
       context: ./spark
-      cache_from:
-        - spark_cache
-      args:
-        BUILDKIT_INLINE_CACHE: "1"
     ports:
       - "8080:8080"
       - "4040:4040"
     volumes:
       - ./spark:/spark:ro
+      - ./datasets:/datasets:ro
     depends_on:
-      couchdb:
+      onprem:
         condition: service_healthy
-      app:
-        condition: service_started
     env_file:
       - .env
     networks:
@@ -84,14 +62,9 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
-      cache_from:
-        - app_cache
-      args:
-        BUILDKIT_INLINE_CACHE: "1"
     volumes:
       - ./app:/app
-      # - ./datasets/llm_model:/app/llm_model
-      #- ./onprem/onprem:/app/onprem
+      - ./datasets:/datasets:ro
     networks:
       - app_network
     deploy:
@@ -112,27 +85,19 @@ services:
     build:
       context: ./onprem
       dockerfile: Dockerfile
-      cache_from:
-        - onprem_cache
-      args:
-        BUILDKIT_INLINE_CACHE: "1"
     volumes:
       - ./onprem:/onprem  
-      - ./datasets:/datasets
-      #- ./datasets/llm_model:/datasets
-    environment:
-      - MODEL_DIR=/datasets/llm_model
+      - ./datasets:/datasets:ro
+    env_file:
+      - .env
     ports:
       - "5001:5001"
-    depends_on:
-      couchdb:
-        condition: service_healthy
     networks:
       - app_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/status"]
       interval: 10s
-      retries: 5
+      retries: 10
       start_period: 10s
     restart: always
 
