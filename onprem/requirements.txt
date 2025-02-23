@@ -4,3 +4,4 @@ onprem
 flask
 requests
 tqdm
+fastapi

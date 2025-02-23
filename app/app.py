@@ -6,6 +6,7 @@ import requests
 from utils import result_xml_to_csv, query_xml_to_csv, content_xml_to_csv
 # from spark_client import process_with_spark
 from flask import Flask, request, jsonify
+from fastapi import FastAPI
 
 logging.basicConfig(
     level=logging.INFO,

@@ -48,9 +48,6 @@ services:
     volumes:
       - ./spark:/spark:ro
       - ./datasets:/datasets:ro
-    depends_on:
-      onprem:
-        condition: service_healthy
     env_file:
       - .env
     networks:
@@ -87,18 +84,21 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./onprem:/onprem  
-      - ./datasets:/datasets:ro
+      - ./datasets:/datasets
     env_file:
       - .env
     ports:
       - "5001:5001"
     networks:
       - app_network
+    depends_on:
+      spark:
+        condition: service_started  
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/status"]
       interval: 10s
-      retries: 10
-      start_period: 10s
+      retries: 50
+      start_period: 60s
     restart: always
 
 volumes:

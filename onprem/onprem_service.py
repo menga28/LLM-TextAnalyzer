@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
+from fastapi import FastAPI
 import logging
 from llm_loader import load_model, process_with_llm
 from config import MODELS
+from utils import downloading_all_models
 
 app = Flask(__name__)
 
@@ -59,4 +61,5 @@ def status():
 
 
 if __name__ == "__main__":
+    downloading_all_models()
     app.run(host="0.0.0.0", port=5001)

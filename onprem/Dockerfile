@@ -1,7 +1,10 @@
+# syntax=docker/dockerfile:1.4
+
 FROM python:3.11-slim
 
-# Installiamo solo i pacchetti necessari e li rimuoviamo dopo per risparmiare spazio
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Abilita la cache di apt e installa solo i pacchetti necessari
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     curl \
@@ -13,14 +16,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /onprem
 
-# Copiamo solo il file dei requisiti per sfruttare la cache di Docker
+# Usa il mount della cache per pip
+RUN --mount=type=cache,target=/root/.cache/pip python -m pip install --upgrade pip
+
+# Copia solo il file dei requisiti per sfruttare la cache di Docker
 COPY requirements.txt /onprem/
 
-# Aggiorniamo pip e installiamo i pacchetti
-RUN python -m pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Installa i pacchetti con caching di pip
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
-# Copiamo il resto del codice solo dopo aver installato le dipendenze
+# Copia il resto del codice solo dopo aver installato le dipendenze
 COPY . /onprem/
 
 # Assicuriamoci che lo script sia eseguibile (se necessario)
