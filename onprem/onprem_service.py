@@ -26,8 +26,12 @@ def infer():
     if not model_id or not prompt:
         return jsonify({"error": "I campi 'model_id' e 'prompt' sono obbligatori"}), 400
 
+    logger.info(
+        f"📥 Received inference request - Model: {model_id}, Prompt: {prompt[:100]}...")
+
     # Carica il modello solo se non è già in memoria
     if current_model != model_id:
+        global model_loaded
         logger.info(f"🔄 Cambio modello in memoria: {model_id}")
         load_model(model_id)
         current_model = model_id
@@ -42,9 +46,11 @@ def infer():
 @app.route('/models', methods=['GET'])
 def get_models():
     """
-    Restituisce la lista dei modelli disponibili.
+    Returns the list of available models.
     """
-    return jsonify({"models": [model["id"] for model in MODELS]})
+    model_list = [model["id"] for model in MODELS]
+    logger.info(f"📋 Available models: {model_list}")
+    return jsonify({"models": model_list})
 
 
 @app.route('/status', methods=['GET'])

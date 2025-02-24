@@ -11,9 +11,6 @@ services:
       - ./fluentd/scripts:/fluentd/scripts
     env_file:
       - .env
-    depends_on:
-      onprem:
-        condition: service_healthy
     command: >
       bash -c "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"
     networks:
