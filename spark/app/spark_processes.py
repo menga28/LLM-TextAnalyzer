@@ -21,13 +21,6 @@ spark = SparkSession.builder \
 # Riduce la verbosità dei log di Spark
 spark.sparkContext.setLogLevel("WARN")
 
-# Ultime sequenze elaborate per ogni database
-last_seq_ids = {
-    "paperllm_content": "0",
-    "paperllm_query": "0",
-    "paperllm_results": "0"
-}
-
 
 def get_available_models():
     """
@@ -63,10 +56,9 @@ def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
         if r.status_code != 200:
             logger.warning(
                 f"⚠️ /set_model ha ritornato {r.status_code}: {r.text}")
-            # Non necessariamente interrompiamo: OnPrem potrebbe ugualmente caricarsi
     except requests.exceptions.RequestException as e:
         logger.error(f"❌ Errore chiamando /set_model per '{model_id}': {e}")
-        return  # Esci e ignora, Spark continuerà
+        return
 
     url_status = "http://onprem:5001/status"
     waited = 0
@@ -140,7 +132,6 @@ def build_query_queue(query_df, content_df, models):
     Poi la ordina per model_id, così inviamo batch di query per ogni modello.
     """
     queue = []
-
     # Uniamo query e content (prodotto cartesiano)
     query_content_pairs = query_df.crossJoin(content_df).collect()
 
@@ -164,7 +155,10 @@ def build_query_queue(query_df, content_df, models):
 def process_queries_with_abstracts():
     """
     Esegue le query su ogni abstract, raggruppate per modello.
-    Attende che OnPrem abbia caricato il modello (polling /status) prima di inviare le query.
+    Le query vengono eseguite se non esistono già in changes_couchdb_documents_paperllm_results.
+    Verifica lo stato corrente di OnPremLLM tramite l'endpoint /status e,
+    se il modello attivo (current_model) non corrisponde a quello richiesto,
+    invoca set_onprem_model_and_wait per caricare il modello corretto.
     """
     try:
         logger.info("🔵 2. Elaborazione delle query con OnPremLLM...")
@@ -186,10 +180,6 @@ def process_queries_with_abstracts():
             FROM changes_couchdb_documents_paperllm_content
         """)
 
-        if query_df.count() == 0 or content_df.count() == 0:
-            logger.info("⚠️ Nessuna nuova query o abstract trovati.")
-            return
-
         existing_results_df = spark.sql("""
             SELECT query_id, content_id, model_id
             FROM changes_couchdb_documents_paperllm_results
@@ -201,32 +191,41 @@ def process_queries_with_abstracts():
 
         queue = build_query_queue(query_df, content_df, models)
 
+        # Filtriamo le query da eseguire: solo quelle per cui non esiste già un risultato
         filtered_queue = []
         for (m_id, q_id, q_text, c_id, c_text, q_upd, c_upd) in queue:
             if (q_id, c_id, m_id) not in existing_results:
-                filtered_queue.append(
-                    (m_id, q_id, q_text, c_id, c_text, q_upd, c_upd))
+                filtered_queue.append((m_id, q_id, q_text, c_id, c_text, q_upd, c_upd))
 
-        logger.info(
-            f"🗒 filtered_queue contiene {len(filtered_queue)} elementi: {filtered_queue}")
+        if not filtered_queue:
+            logger.info("⚠️ Nessuna nuova query o abstract da processare dopo il filtraggio.")
+            return
 
-        current_model = None
+        logger.info(f"🗒 filtered_queue contiene {len(filtered_queue)} elementi: {filtered_queue}")
+
+        current_onprem_model = None
         queries_executed_for_model = 0
         num_processed = 0
 
         for (model_id, query_id, query_text, content_id, abstract_text, q_upd, c_upd) in filtered_queue:
 
-            if model_id != current_model or queries_executed_for_model >= MAX_QUERIES_PER_MODEL:
-                logger.info(
-                    f"🔄 Cambio modello in corso: set_onprem_model_and_wait({model_id})")
-                set_onprem_model_and_wait(model_id)
-                current_model = model_id
-                queries_executed_for_model = 0
+            # Se il modello attivo non corrisponde o abbiamo raggiunto il limite di query per modello,
+            # verifichiamo lo stato corrente tramite /status e, se necessario, cambiamo modello.
+            if current_onprem_model != model_id or queries_executed_for_model >= MAX_QUERIES_PER_MODEL:
+                status_info = get_onprem_status()
+                if not status_info or status_info.get("current_model") != model_id:
+                    logger.info(f"🔄 Cambio modello in corso: set_onprem_model_and_wait({model_id})")
+                    set_onprem_model_and_wait(model_id)
+                    status_info = get_onprem_status()
+                    current_onprem_model = status_info.get("current_model") if status_info else None
+                    queries_executed_for_model = 0
+                else:
+                    current_onprem_model = status_info.get("current_model")
+                    queries_executed_for_model = 0
 
             response = send_to_onprem_llm(query_text, abstract_text, model_id)
             if response and response != "❌ Nessun modello caricato.":
-                save_result_to_couchdb(
-                    query_id, content_id, response, q_upd, c_upd, model_id)
+                save_result_to_couchdb(query_id, content_id, response, q_upd, c_upd, model_id)
                 num_processed += 1
             queries_executed_for_model += 1
 
@@ -236,33 +235,48 @@ def process_queries_with_abstracts():
         logger.error(f"❌ Errore nel ciclo di elaborazione: {e}")
 
 
+def get_onprem_status(timeout=10):
+    """
+    Recupera lo stato corrente di OnPremLLM, che include:
+      - "status": "ok" se il modello è caricato, altrimenti "loading"
+      - "current_model": il modello attualmente attivo (quando status è "ok")
+      - "loading_model": il modello in fase di caricamento (quando status è "loading")
+    """
+    url_status = "http://onprem:5001/status"
+    try:
+        resp = requests.get(url_status, timeout=timeout)
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            logger.warning(f"⚠️ /status ha ritornato codice {resp.status_code}")
+            return None
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"⚠️ Errore chiamando /status: {e}")
+        return None
+
+
 def process_changes():
     """
-    Processa le modifiche da ciascun database e aggiorna i DataFrame Spark.
+    Carica l'intero contenuto dei database da CouchDB e aggiorna i DataFrame Spark.
+    Le tabelle temporanee vengono create con tutti i documenti, così che le query
+    vengano eseguite se non sono presenti in changes_couchdb_documents_paperllm_results.
     """
-    global last_seq_ids
     schemas = {
         "paperllm_content": "`_id` STRING, `title` STRING, `abstract` STRING, `updated_at` STRING",
         "paperllm_query": "`_id` STRING, `text` STRING, `updated_at` STRING",
         "paperllm_results": "`_id` STRING, `query_id` STRING, `content_id` STRING, `response` STRING, `query_updated_at` STRING, `content_updated_at` STRING, `model_id` STRING"
     }
 
-    for db_name in last_seq_ids.keys():
-        valid_changes, new_last_seq = get_changes_from_couchdb(
-            db_name, last_seq_ids[db_name])
-
+    # Per ciascun database, recuperiamo tutti i documenti partendo da "0"
+    for db_name in schemas.keys():
+        valid_changes, _ = get_changes_from_couchdb(db_name, "0")
         if valid_changes:
-            documents = [change['doc']
-                         for change in valid_changes if 'doc' in change]
+            documents = [change['doc'] for change in valid_changes if 'doc' in change]
             df = spark.createDataFrame(documents)
         else:
             df = spark.createDataFrame([], schema=schemas[db_name])
-
         df.createOrReplaceTempView(f"changes_couchdb_documents_{db_name}")
-        logger.info(
-            f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
-
-        last_seq_ids[db_name] = new_last_seq
+        logger.info(f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
 
 
 # Main loop

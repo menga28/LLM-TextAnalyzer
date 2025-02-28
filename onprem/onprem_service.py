@@ -69,13 +69,21 @@ def status():
     """
     Restituisce lo stato del servizio:
     - "ok" se il modello è caricato
-    - "loading" se il modello non è ancora caricato
+    - "loading" se il modello è in fase di caricamento
+    Include inoltre il modello attualmente caricato o in caricamento.
     """
     if model_loaded:
-        return jsonify({"status": "ok", "message": "OnPremLLM è attivo e il modello è caricato"}), 200
+        return jsonify({
+            "status": "ok",
+            "message": "OnPremLLM è attivo e il modello è caricato",
+            "current_model": current_model
+        }), 200
     else:
-        return jsonify({"status": "loading", "message": "OnPremLLM è in fase di caricamento"}), 503
-
+        return jsonify({
+            "status": "loading",
+            "message": "OnPremLLM è in fase di caricamento",
+            "loading_model": current_model 
+        }), 503
 
 if __name__ == "__main__":
     thread = threading.Thread(target=check_all_models)
