@@ -17,7 +17,7 @@ def load_model(model_id):
     model = get_model_by_id(model_id)
 
     if llm:
-        del llm
+        llm = None
 
     logger.info(f"🚀 Caricamento del modello {model_id} da {model['path']}...")
 
@@ -54,5 +54,5 @@ def process_with_llm(prompt):
     global llm
     if not llm:
         return "❌ Nessun modello caricato."
-    
+
     return llm.prompt(prompt)
