@@ -87,7 +87,7 @@ def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
         f"❌ Il modello '{model_id}' non si è caricato entro {max_wait} secondi.")
 
 
-def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, timeout=90):
+def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, timeout=300):
     """
     Invia una query e un abstract a OnPremLLM specificando il modello
     (che dovrebbe già essere impostato correttamente su OnPrem).
