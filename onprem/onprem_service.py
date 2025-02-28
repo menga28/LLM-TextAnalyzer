@@ -1,16 +1,16 @@
+import threading
 from flask import Flask, request, jsonify
 from fastapi import FastAPI
 import logging
 from llm_loader import load_model, process_with_llm
 from config import MODELS
-from utils import downloading_all_models
+from utils import check_all_models
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Modello attualmente in memoria
 current_model = None
 model_loaded = False
 
@@ -29,18 +29,29 @@ def infer():
     logger.info(
         f"📥 Received inference request - Model: {model_id}, Prompt: {prompt[:100]}...")
 
-    # Carica il modello solo se non è già in memoria
+    response = process_with_llm(prompt)
+
+    return jsonify({"response": response})
+
+@app.route('/set_model', methods=['POST'])
+def set_model():
+    """
+    Imposta manualmente il modello corrente in memoria.
+    Esempio di utilizzo: POST /set_model?model_id=mistral-7b
+    """
+    global current_model, model_loaded
+    model_id = request.args.get("model_id")
+
+    if not model_id:
+        return jsonify({"error": "model_id parameter is missing"}), 400
+
     if current_model != model_id:
-        global model_loaded
-        logger.info(f"🔄 Cambio modello in memoria: {model_id}")
+        logger.info(f"🔄 Richiesta set_model: {model_id}")
         load_model(model_id)
         current_model = model_id
         model_loaded = True
 
-    # Esegui il prompt
-    response = process_with_llm(prompt)
-
-    return jsonify({"response": response})
+    return jsonify({"message": f"Model {model_id} is now set"}), 200
 
 
 @app.route('/models', methods=['GET'])
@@ -67,5 +78,6 @@ def status():
 
 
 if __name__ == "__main__":
-    downloading_all_models()
+    thread = threading.Thread(target=check_all_models)
+    thread.start()
     app.run(host="0.0.0.0", port=5001)

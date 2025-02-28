@@ -5,28 +5,29 @@ from pyspark.sql import SparkSession
 from couchdb_utils import get_changes_from_couchdb, save_result_to_couchdb
 import requests
 
-# Configurazione del logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configurazione di Spark
+# Numero massimo di query consecutive per un modello prima di cambiarlo.
+MAX_QUERIES_PER_MODEL = 10
+
+# Inizializza Spark
 spark = SparkSession.builder \
     .appName("CouchDBToSparkWithLLM") \
-    .config("spark.executor.memory", "4g").config("spark.executor.cores", "2") \
+    .config("spark.executor.memory", "4g") \
+    .config("spark.executor.cores", "2") \
     .getOrCreate()
 
-# Variabili globali per tracciare l'ultima sequenza elaborata per ogni database
+# Riduce la verbosità dei log di Spark
+spark.sparkContext.setLogLevel("WARN")
+
+# Ultime sequenze elaborate per ogni database
 last_seq_ids = {
     "paperllm_content": "0",
     "paperllm_query": "0",
     "paperllm_results": "0"
 }
 
-import requests
-import time
-
-import requests
-import time
 
 def get_available_models():
     """
@@ -38,15 +39,66 @@ def get_available_models():
         if response.status_code == 200:
             return response.json().get("models", [])
         else:
-            logger.error(f"Errore nel recupero dei modelli: {response.status_code} {response.text}")
+            logger.error(
+                f"Errore nel recupero dei modelli: {response.status_code} {response.text}")
             return []
     except requests.exceptions.RequestException as e:
         logger.error(f"❌ Errore nella richiesta dei modelli: {e}")
         return []
 
+
+def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
+    """
+    1) Richiama /set_model per impostare il modello su OnPrem (timeout 120s).
+    2) Esegue un polling di /status finché:
+       - /status non restituisce {status: "ok"} (modello pronto)
+       - oppure non scade il tempo max_wait (di default 1 ora).
+    Se dopo max_wait il modello non è pronto, logga un errore e termina la funzione.
+    """
+    url_set_model = f"http://onprem:5001/set_model?model_id={model_id}"
+    try:
+        logger.info(f"🔄 set_onprem_model_and_wait: POST {url_set_model}")
+        # Aumenta il timeout se caricare il modello può richiedere molto
+        r = requests.post(url_set_model, timeout=120)
+        if r.status_code != 200:
+            logger.warning(
+                f"⚠️ /set_model ha ritornato {r.status_code}: {r.text}")
+            # Non necessariamente interrompiamo: OnPrem potrebbe ugualmente caricarsi
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Errore chiamando /set_model per '{model_id}': {e}")
+        return  # Esci e ignora, Spark continuerà
+
+    url_status = "http://onprem:5001/status"
+    waited = 0
+    while waited < max_wait:
+        try:
+            resp = requests.get(url_status, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("status") == "ok":
+                    logger.info(
+                        f"✅ Modello '{model_id}' risulta ora caricato su OnPrem.")
+                    return
+                else:
+                    logger.info(
+                        f"⏳ Modello '{model_id}' in caricamento (status='{data.get('status')}')...")
+            else:
+                logger.warning(
+                    f"⚠️ /status ha ritornato codice {resp.status_code}")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"⚠️ Errore durante polling /status: {e}")
+
+        time.sleep(check_interval)
+        waited += check_interval
+
+    logger.error(
+        f"❌ Il modello '{model_id}' non si è caricato entro {max_wait} secondi.")
+
+
 def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, timeout=90):
     """
-    Invia una query e un abstract a OnPremLLM specificando il modello.
+    Invia una query e un abstract a OnPremLLM specificando il modello
+    (che dovrebbe già essere impostato correttamente su OnPrem).
     """
     url = "http://onprem:5001/infer"
     payload = {
@@ -59,36 +111,71 @@ def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, t
             start_time = time.time()
             logger.info(f"📤 [{model_id}] Invio richiesta a OnPremLLM...")
             response = requests.post(url, json=payload, timeout=timeout)
-            elapsed_time = time.time() - start_time  
+            elapsed_time = time.time() - start_time
 
             if response.status_code == 200:
-                logger.info(f"✅ [{model_id}] OnPremLLM ha risposto in {elapsed_time:.2f}s.")
+                logger.info(
+                    f"✅ [{model_id}] OnPremLLM ha risposto in {elapsed_time:.2f}s.")
                 return response.json().get('response', "No response")
             else:
-                logger.error(f"❌ [{model_id}] Errore API OnPremLLM: {response.status_code} {response.text}")
+                logger.error(
+                    f"❌ [{model_id}] Errore API OnPremLLM: {response.status_code} {response.text}")
                 return None
         except requests.exceptions.ConnectionError:
-            logger.warning(f"⚠️ [{model_id}] OnPremLLM non disponibile (tentativo {attempt + 1}/{max_retries}). Riprovo...")
+            logger.warning(
+                f"⚠️ [{model_id}] OnPremLLM non disponibile (tentativo {attempt + 1}/{max_retries}). Riprovo...")
             time.sleep(wait_time)
         except requests.exceptions.ReadTimeout:
             logger.error(f"❌ [{model_id}] Timeout di {timeout}s superato.")
             time.sleep(wait_time)
 
-    logger.error(f"❌ [{model_id}] OnPremLLM non raggiungibile dopo {max_retries} tentativi.")
+    logger.error(
+        f"❌ [{model_id}] OnPremLLM non raggiungibile dopo {max_retries} tentativi.")
     return None
+
+
+def build_query_queue(query_df, content_df, models):
+    """
+    Costruisce una coda di tuple (model_id, query_id, query_text, content_id, abstract_text, q_upd, c_upd).
+    Poi la ordina per model_id, così inviamo batch di query per ogni modello.
+    """
+    queue = []
+
+    # Uniamo query e content (prodotto cartesiano)
+    query_content_pairs = query_df.crossJoin(content_df).collect()
+
+    for row in query_content_pairs:
+        for m in models:
+            queue.append((
+                m,
+                row["query_id"],
+                row["query_text"],
+                row["content_id"],
+                row["content_text"],
+                row["query_updated_at"],
+                row["content_updated_at"]
+            ))
+
+    # Ordina per model_id
+    queue.sort(key=lambda x: x[0])
+    return queue
+
 
 def process_queries_with_abstracts():
     """
-    Esegue le query su ogni abstract con ogni modello disponibile.
+    Esegue le query su ogni abstract, raggruppate per modello.
+    Attende che OnPrem abbia caricato il modello (polling /status) prima di inviare le query.
     """
     try:
         logger.info("🔵 2. Elaborazione delle query con OnPremLLM...")
 
-        models = get_available_models()  # ✅ Recupera i modelli disponibili via API
+        # 1) Recuperiamo i modelli disponibili
+        models = get_available_models()
         if not models:
             logger.error("❌ Nessun modello disponibile per eseguire le query.")
             return
 
+        # 2) Leggiamo query e content da Spark
         query_df = spark.sql("""
             SELECT _id AS query_id, text AS query_text, updated_at AS query_updated_at
             FROM changes_couchdb_documents_paperllm_query
@@ -102,28 +189,52 @@ def process_queries_with_abstracts():
         if query_df.count() == 0 or content_df.count() == 0:
             logger.info("⚠️ Nessuna nuova query o abstract trovati.")
             return
-        
-        query_content_pairs = query_df.crossJoin(content_df)
 
+        existing_results_df = spark.sql("""
+            SELECT query_id, content_id, model_id
+            FROM changes_couchdb_documents_paperllm_results
+        """)
+        existing_results = {
+            (row["query_id"], row["content_id"], row["model_id"])
+            for row in existing_results_df.collect()
+        }
+
+        queue = build_query_queue(query_df, content_df, models)
+
+        filtered_queue = []
+        for (m_id, q_id, q_text, c_id, c_text, q_upd, c_upd) in queue:
+            if (q_id, c_id, m_id) not in existing_results:
+                filtered_queue.append(
+                    (m_id, q_id, q_text, c_id, c_text, q_upd, c_upd))
+
+        logger.info(
+            f"🗒 filtered_queue contiene {len(filtered_queue)} elementi: {filtered_queue}")
+
+        current_model = None
+        queries_executed_for_model = 0
         num_processed = 0
-        for row in query_content_pairs.collect():
-            query_id = row["query_id"]
-            query_text = row["query_text"]
-            content_id = row["content_id"]
-            abstract_text = row["content_text"]
 
-            for model_id in models:  # ✅ Itera su ogni modello disponibile
-                logger.info(f"📝 [{model_id}] Elaborazione query_id={query_id} con content_id={content_id}")
+        for (model_id, query_id, query_text, content_id, abstract_text, q_upd, c_upd) in filtered_queue:
 
-                response = send_to_onprem_llm(query_text, abstract_text, model_id)
-                if response:
-                    save_result_to_couchdb(query_id, content_id, response, row["query_updated_at"], row["content_updated_at"], model_id)
-                    num_processed += 1
+            if model_id != current_model or queries_executed_for_model >= MAX_QUERIES_PER_MODEL:
+                logger.info(
+                    f"🔄 Cambio modello in corso: set_onprem_model_and_wait({model_id})")
+                set_onprem_model_and_wait(model_id)
+                current_model = model_id
+                queries_executed_for_model = 0
+
+            response = send_to_onprem_llm(query_text, abstract_text, model_id)
+            if response and response != "❌ Nessun modello caricato.":
+                save_result_to_couchdb(
+                    query_id, content_id, response, q_upd, c_upd, model_id)
+                num_processed += 1
+            queries_executed_for_model += 1
 
         logger.info(f"🟢 {num_processed} nuove query processate.")
 
     except Exception as e:
         logger.error(f"❌ Errore nel ciclo di elaborazione: {e}")
+
 
 def process_changes():
     """
@@ -137,25 +248,31 @@ def process_changes():
     }
 
     for db_name in last_seq_ids.keys():
-        valid_changes, new_last_seq = get_changes_from_couchdb(db_name, last_seq_ids[db_name])
-        
+        valid_changes, new_last_seq = get_changes_from_couchdb(
+            db_name, last_seq_ids[db_name])
+
         if valid_changes:
-            documents = [change['doc'] for change in valid_changes if 'doc' in change]
+            documents = [change['doc']
+                         for change in valid_changes if 'doc' in change]
             df = spark.createDataFrame(documents)
         else:
             df = spark.createDataFrame([], schema=schemas[db_name])
 
         df.createOrReplaceTempView(f"changes_couchdb_documents_{db_name}")
-        logger.info(f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
+        logger.info(
+            f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
 
-# ✅ **Unico ciclo principale**
+        last_seq_ids[db_name] = new_last_seq
+
+
+# Main loop
 while True:
     try:
         logger.info("🟢 1. Aggiornamento dati da CouchDB in Spark...")
-        process_changes()  # Aggiorna Spark con nuovi dati
+        process_changes()
 
         logger.info("🔵 2. Elaborazione delle query con OnPremLLM...")
-        process_queries_with_abstracts()  # Esegue le query sugli abstract
+        process_queries_with_abstracts()
 
     except Exception as e:
         logger.error(f"❌ Errore nel ciclo di elaborazione: {e}")

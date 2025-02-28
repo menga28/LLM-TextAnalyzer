@@ -27,9 +27,9 @@ def calculate_md5(file_path: str, hash_algo='md5'):
         logger.error(f"Failed to calculate MD5 for {file_path}: {e}")
         return None
 
-def downloading_all_models():
+def check_all_models():
     """Downloads all models listed in the configuration."""
-    logger.info("Starting the model downloading process...")
+    logger.info("Starting checking models process...")
     
     for model in MODELS:
         try:

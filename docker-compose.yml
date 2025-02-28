@@ -43,8 +43,8 @@ services:
       - "8080:8080"
       - "4040:4040"
     volumes:
-      - ./spark:/spark:ro
-      - ./datasets:/datasets:ro
+      - ./spark:/spark
+      - ./datasets:/datasets
     env_file:
       - .env
     networks:
