@@ -78,12 +78,38 @@ MODELS = [
     {
         "id": "mistral-7b",
         "filename": "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "path": os.path.join(MODEL_DIR, "mistral-7b-instruct-v0.2.Q4_K_M.gguf"),
         "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "hash_md5": "d98804ecfe3f274b46aed70d9257945e",
+        "prompt_template": f"""[INST] {COMMON_SYSTEM_PROMPT}\n{{prompt}} [/INST]"""
+    },
+    {
+        "id": "llama-3.2-3b",
+        "filename": "Llama-3.2-3B-Instruct-uncensored-Q8_0.gguf",
+        "path": os.path.join(MODEL_DIR, "Llama-3.2-3B-Instruct-uncensored-Q8_0.gguf"),
+        "url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-uncensored-GGUF/resolve/main/Llama-3.2-3B-Instruct-uncensored-Q8_0.gguf",
+        "hash_md5": "08dd494d754c926afddc737400ab6c91",
+        "prompt_template": (
+            "<|begin_of_text|>"
+            "<|start_header_id|>system<|end_header_id|>\n\n"
+            f"{COMMON_SYSTEM_PROMPT}<|eot_id|>"
+            "<|start_header_id|>user<|end_header_id|>\n\n"
+            "{prompt}<|eot_id|>"
+            "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        )
     },
     {
         "id": "DeepSeek-R1-8B",
         "filename": "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+        "path": os.path.join(MODEL_DIR, "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf"),
         "url": "https://huggingface.co/unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF/resolve/main/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+        "hash_md5": "3bf955d9c842acc1211326046a1275c8",
+        "prompt_template": """<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+                            You are a concise assistant. Provide only the direct answer to the question, without explanations, reasoning, or additional context.
+                            <|eot_id|><|start_header_id|>user<|end_header_id|>
+                            {prompt}
+                            <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                            """
     }
 ]
 ```
