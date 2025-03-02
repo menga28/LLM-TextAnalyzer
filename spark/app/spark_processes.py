@@ -201,7 +201,9 @@ def process_queries_with_abstracts():
             logger.info("⚠️ Nessuna nuova query o abstract da processare dopo il filtraggio.")
             return
 
-        logger.info(f"🗒 filtered_queue contiene {len(filtered_queue)} elementi: {filtered_queue}")
+        logger.info(f"🗒 filtered_queue contiene {len(filtered_queue)} elementi:")
+        for item in filtered_queue:
+            logger.info(f"   {item}")
 
         current_onprem_model = None
         queries_executed_for_model = 0
