@@ -52,7 +52,7 @@ def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
     try:
         logger.info(f"🔄 set_onprem_model_and_wait: POST {url_set_model}")
         # Aumenta il timeout se caricare il modello può richiedere molto
-        r = requests.post(url_set_model, timeout=120)
+        r = requests.post(url_set_model, timeout=1200)
         if r.status_code != 200:
             logger.warning(
                 f"⚠️ /set_model ha ritornato {r.status_code}: {r.text}")
@@ -201,7 +201,9 @@ def process_queries_with_abstracts():
             logger.info("⚠️ Nessuna nuova query o abstract da processare dopo il filtraggio.")
             return
 
-        logger.info(f"🗒 filtered_queue contiene {len(filtered_queue)} elementi: {filtered_queue}")
+        logger.info(f"🗒 filtered_queue contiene {len(filtered_queue)} elementi:")
+        for item in filtered_queue:
+            logger.info(f"   {item}")
 
         current_onprem_model = None
         queries_executed_for_model = 0
