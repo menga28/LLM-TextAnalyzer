@@ -14,7 +14,7 @@ services:
     command: >
       bash -c "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"
     networks:
-      - app_network
+      - llm_network
     restart: on-failure
 
   couchdb:
@@ -28,7 +28,7 @@ services:
     volumes:
       - couchdb-data:/opt/couchdb/data
     networks:
-      - app_network
+      - llm_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
       interval: 10s
@@ -48,7 +48,7 @@ services:
     env_file:
       - .env
     networks:
-      - app_network
+      - llm_network
     restart: on-failure
 
   utils:
@@ -60,7 +60,7 @@ services:
       - ./utils:/utils
       - ./datasets:/datasets:rw
     networks:
-      - app_network
+      - llm_network
     deploy:
       resources:
         limits:
@@ -84,7 +84,7 @@ services:
     ports:
       - "5001:5001"
     networks:
-      - app_network
+      - llm_network
     depends_on:
       spark:
         condition: service_started  
@@ -100,5 +100,5 @@ volumes:
     driver: local
 
 networks:
-  app_network:
+  llm_network:
     driver: bridge
