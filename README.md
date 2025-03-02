@@ -284,10 +284,8 @@ Services interact seamlessly through predefined networking and volume configurat
 
 ---
 ### **Port Mappings**
-  - `5000` → Flask API  
   - `5001` → OnPrem LLM Server  
   - `5984` → CouchDB Admin Panel  
-
 ---
 
 ### **Component Interactions**  
