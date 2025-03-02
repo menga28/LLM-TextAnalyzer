@@ -51,14 +51,14 @@ services:
       - app_network
     restart: on-failure
 
-  app:
-    container_name: llm-app
+  utils:
+    container_name: llm-utils
     build:
-      context: ./app
+      context: ./utils
       dockerfile: Dockerfile
     volumes:
-      - ./app:/app
-      - ./datasets:/datasets:ro
+      - ./utils:/utils
+      - ./datasets:/datasets:rw
     networks:
       - app_network
     deploy:
