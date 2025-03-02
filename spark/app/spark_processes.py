@@ -52,7 +52,7 @@ def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
     try:
         logger.info(f"🔄 set_onprem_model_and_wait: POST {url_set_model}")
         # Aumenta il timeout se caricare il modello può richiedere molto
-        r = requests.post(url_set_model, timeout=120)
+        r = requests.post(url_set_model, timeout=1200)
         if r.status_code != 200:
             logger.warning(
                 f"⚠️ /set_model ha ritornato {r.status_code}: {r.text}")
