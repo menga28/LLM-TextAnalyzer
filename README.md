@@ -14,11 +14,6 @@
 - **Support for multiple cutting-edge LLM solutions**: The project is compatible with various on-premise LLM deployments, including [OnPrem LLM](https://github.com/amaiya/onprem), allowing flexibility in model selection and execution.  
 - **Dynamic model downloading and management**: The system automatically downloads LLM models based on a configuration file, ensuring the right models are available for analysis. Downloads are resumable, allowing for interruption handling and efficient model retrieval.  
 
-
-## Requirements
-
-Here is the **Requirements** section for your README:
-
 ---
 
 ## Requirements  
