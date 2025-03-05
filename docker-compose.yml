@@ -1,5 +1,4 @@
 services:
-
   fluentd:
     container_name: llm-fluentd
     build:
@@ -33,7 +32,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
       interval: 10s
       retries: 5
-    restart: always
+    restart: unless-stopped
 
   spark:
     container_name: llm-spark
@@ -49,7 +48,7 @@ services:
       - .env
     networks:
       - llm_network
-    restart: on-failure
+    restart: unless-stopped
 
   utils:
     container_name: llm-utils
@@ -64,10 +63,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
+          cpus: "4"
         reservations:
-          cpus: '2'
-    restart: always
+          cpus: "2"
+    restart: unless-stopped
     ports:
       - "5000:5000"
 
@@ -77,7 +76,7 @@ services:
       context: ./onprem
       dockerfile: Dockerfile
     volumes:
-      - ./onprem:/onprem  
+      - ./onprem:/onprem
       - ./datasets:/datasets
     env_file:
       - .env
@@ -87,13 +86,13 @@ services:
       - llm_network
     depends_on:
       spark:
-        condition: service_started  
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/status"]
       interval: 10s
       retries: 50
       start_period: 60s
-    restart: always
+    restart: unless-stopped
 
 volumes:
   couchdb-data:
