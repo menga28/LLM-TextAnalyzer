@@ -63,9 +63,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
+          cpus: "1"
         reservations:
-          cpus: "2"
+          cpus: "1"
     restart: unless-stopped
     ports:
       - "5000:5000"
