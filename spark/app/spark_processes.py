@@ -195,13 +195,16 @@ def process_queries_with_abstracts():
         filtered_queue = []
         for (m_id, q_id, q_text, c_id, c_text, q_upd, c_upd) in queue:
             if (q_id, c_id, m_id) not in existing_results:
-                filtered_queue.append((m_id, q_id, q_text, c_id, c_text, q_upd, c_upd))
+                filtered_queue.append(
+                    (m_id, q_id, q_text, c_id, c_text, q_upd, c_upd))
 
         if not filtered_queue:
-            logger.info("⚠️ Nessuna nuova query o abstract da processare dopo il filtraggio.")
+            logger.info(
+                "⚠️ Nessuna nuova query o abstract da processare dopo il filtraggio.")
             return
 
-        logger.info(f"🗒 filtered_queue contiene {len(filtered_queue)} elementi:")
+        logger.info(
+            f"🗒 filtered_queue contiene {len(filtered_queue)} elementi:")
         for item in filtered_queue:
             logger.info(f"   {item}")
 
@@ -216,18 +219,21 @@ def process_queries_with_abstracts():
             if current_onprem_model != model_id or queries_executed_for_model >= MAX_QUERIES_PER_MODEL:
                 status_info = get_onprem_status()
                 if not status_info or status_info.get("current_model") != model_id:
-                    logger.info(f"🔄 Cambio modello in corso: set_onprem_model_and_wait({model_id})")
+                    logger.info(
+                        f"🔄 Cambio modello in corso: set_onprem_model_and_wait({model_id})")
                     set_onprem_model_and_wait(model_id)
                     status_info = get_onprem_status()
-                    current_onprem_model = status_info.get("current_model") if status_info else None
+                    current_onprem_model = status_info.get(
+                        "current_model") if status_info else None
                     queries_executed_for_model = 0
                 else:
                     current_onprem_model = status_info.get("current_model")
                     queries_executed_for_model = 0
 
             response = send_to_onprem_llm(query_text, abstract_text, model_id)
-            if response and response != "❌ Nessun modello caricato.":
-                save_result_to_couchdb(query_id, content_id, response, q_upd, c_upd, model_id)
+            if response and response != "❌ Nessun modello caricato." and model_id not in [None, "null"]:
+                save_result_to_couchdb(
+                    query_id, content_id, response, q_upd, c_upd, model_id)
                 num_processed += 1
             queries_executed_for_model += 1
 
@@ -250,7 +256,8 @@ def get_onprem_status(timeout=10):
         if resp.status_code == 200:
             return resp.json()
         else:
-            logger.warning(f"⚠️ /status ha ritornato codice {resp.status_code}")
+            logger.warning(
+                f"⚠️ /status ha ritornato codice {resp.status_code}")
             return None
     except requests.exceptions.RequestException as e:
         logger.warning(f"⚠️ Errore chiamando /status: {e}")
@@ -273,12 +280,14 @@ def process_changes():
     for db_name in schemas.keys():
         valid_changes, _ = get_changes_from_couchdb(db_name, "0")
         if valid_changes:
-            documents = [change['doc'] for change in valid_changes if 'doc' in change]
+            documents = [change['doc']
+                         for change in valid_changes if 'doc' in change]
             df = spark.createDataFrame(documents)
         else:
             df = spark.createDataFrame([], schema=schemas[db_name])
         df.createOrReplaceTempView(f"changes_couchdb_documents_{db_name}")
-        logger.info(f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
+        logger.info(
+            f"Tabella 'changes_couchdb_documents_{db_name}' aggiornata con {len(valid_changes)} documenti.")
 
 
 # Main loop
