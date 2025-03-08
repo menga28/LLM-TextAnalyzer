@@ -26,7 +26,7 @@ def periodic_call():
 
     logging.info("Processo periodico completato.\n")
 
-    threading.Timer(60, periodic_call).start()
+    threading.Timer(120, periodic_call).start()
 
 def main():
     """
