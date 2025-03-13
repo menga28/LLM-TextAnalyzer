@@ -67,8 +67,6 @@ services:
         reservations:
           cpus: "1"
     restart: unless-stopped
-    ports:
-      - "5000:5000"
 
   onprem:
     container_name: llm-onprem
