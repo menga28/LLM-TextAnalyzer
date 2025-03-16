@@ -2,7 +2,8 @@ import threading
 from flask import Flask, request, jsonify
 from fastapi import FastAPI
 import logging
-from llm_loader import load_model, process_with_llm
+import time
+from llm_loader import load_model, process_with_llm, llm
 from config import MODELS
 from utils import check_all_models
 
@@ -33,23 +34,33 @@ def infer():
 
     return jsonify({"response": response})
 
+
 @app.route('/set_model', methods=['POST'])
 def set_model():
-    """
-    Imposta manualmente il modello corrente in memoria.
-    Esempio di utilizzo: POST /set_model?model_id=mistral-7b
-    """
     global current_model, model_loaded
     model_id = request.args.get("model_id")
 
     if not model_id:
         return jsonify({"error": "model_id parameter is missing"}), 400
 
+    logger.info(f"🔄 Tentativo di impostare il modello: {model_id}")
+    logger.info(
+        f"🎯 Modello attualmente attivo PRIMA del cambio: {current_model}")
+
     if current_model != model_id:
-        logger.info(f"🔄 Richiesta set_model: {model_id}")
         load_model(model_id)
-        current_model = model_id
-        model_loaded = True
+
+        # Aspetta qualche secondo per assicurarsi che il modello venga caricato
+        time.sleep(2)
+
+        # Controlla se il modello è stato cambiato
+        if llm:
+            current_model = model_id
+            model_loaded = True
+            logger.info(f"✅ Modello aggiornato con successo: {current_model}")
+        else:
+            logger.error(
+                f"❌ ERRORE: Nessun modello caricato dopo il cambio a {model_id}!")
 
     return jsonify({"message": f"Model {model_id} is now set"}), 200
 
@@ -82,8 +93,9 @@ def status():
         return jsonify({
             "status": "loading",
             "message": "OnPremLLM è in fase di caricamento",
-            "loading_model": current_model 
+            "loading_model": current_model
         }), 503
+
 
 if __name__ == "__main__":
     thread = threading.Thread(target=check_all_models)
