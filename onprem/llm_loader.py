@@ -64,7 +64,11 @@ def process_with_llm(prompt):
     logger.info(f"📤 Prompt inviato a LLM: {prompt}")
     logger.info(f"📝 Usando il prompt template: {prompt_template}")
 
-    response = llm.prompt(prompt, prompt_template=prompt_template)
+    formatted_prompt = prompt_template.replace("{prompt}", prompt)
+
+    # logger.info(f"🔄 Prompt finale inviato al modello: {formatted_prompt}")
+
+    response = llm.prompt(formatted_prompt)
     logger.info(f"📝 Risposta generata: {response}")
 
     return response

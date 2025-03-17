@@ -50,17 +50,17 @@ def set_model():
     if current_model != model_id:
         load_model(model_id)
 
-        # Aspetta qualche secondo per assicurarsi che il modello venga caricato
         time.sleep(2)
 
-        # Controlla se il modello è stato cambiato
-        if llm:
-            current_model = model_id
-            model_loaded = True
-            logger.info(f"✅ Modello aggiornato con successo: {current_model}")
-        else:
+        if llm is None:
             logger.error(
-                f"❌ ERRORE: Nessun modello caricato dopo il cambio a {model_id}!")
+                f"❌ ERRORE: Il modello {model_id} non è stato caricato correttamente!")
+            model_loaded = False
+            return jsonify({"error": f"Failed to load model {model_id}"}), 500
+
+        current_model = model_id
+        model_loaded = True
+        logger.info(f"✅ Modello aggiornato con successo: {current_model}")
 
     return jsonify({"message": f"Model {model_id} is now set"}), 200
 

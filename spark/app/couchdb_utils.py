@@ -1,6 +1,7 @@
 import logging
 import traceback
 from couchdb import Server
+from datetime import datetime
 import os
 
 # Configurazione del logger
@@ -58,14 +59,18 @@ def save_result_to_couchdb(query_id, content_id, response, query_updated_at, con
     couch_db = couch_server["paperllm_results"]
 
     doc_id = f"{content_id}_{query_id}_{model_id}"
+
+    # 🔥 Usa il timestamp UTC corrente per indicare l'ora di esecuzione effettiva
+    execution_time = datetime.utcnow().isoformat() + "Z"
+
     doc = {
         "_id": doc_id,
         "query_id": query_id,
         "content_id": content_id,
         "response": response,
-        "query_updated_at": query_updated_at,
+        "query_updated_at": execution_time,  
         "content_updated_at": content_updated_at,
-        "model_id": model_id 
+        "model_id": model_id
     }
 
     logger.info(
@@ -73,6 +78,7 @@ def save_result_to_couchdb(query_id, content_id, response, query_updated_at, con
 
     try:
         couch_db.save(doc)
-        logger.info(f"✅ Risultato salvato in CouchDB con successo: {doc_id}")
+        logger.info(
+            f"✅ Risultato salvato in CouchDB con successo: {doc_id} con timestamp {execution_time}")
     except Exception as e:
         logger.error(f"❌ Errore nel salvataggio su CouchDB per {doc_id}: {e}")
