@@ -41,21 +41,15 @@ def get_available_models():
 
 
 def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
-    """
-    1) Richiama /set_model per impostare il modello su OnPrem (timeout 120s).
-    2) Esegue un polling di /status finché:
-       - /status non restituisce {status: "ok"} (modello pronto)
-       - oppure non scade il tempo max_wait (di default 1 ora).
-    Se dopo max_wait il modello non è pronto, logga un errore e termina la funzione.
-    """
     url_set_model = f"http://onprem:5001/set_model?model_id={model_id}"
     try:
-        logger.info(f"🔄 set_onprem_model_and_wait: POST {url_set_model}")
-        # Aumenta il timeout se caricare il modello può richiedere molto
+        logger.info(f"🔄 Tentativo di cambio modello a {model_id}")
         r = requests.post(url_set_model, timeout=1200)
+        logger.info(f"🔍 Risposta /set_model: {r.status_code} {r.text}")
+
         if r.status_code != 200:
-            logger.warning(
-                f"⚠️ /set_model ha ritornato {r.status_code}: {r.text}")
+            logger.warning(f"⚠️ Errore impostando il modello: {r.status_code}: {r.text}")
+            return
     except requests.exceptions.RequestException as e:
         logger.error(f"❌ Errore chiamando /set_model per '{model_id}': {e}")
         return
@@ -67,24 +61,22 @@ def set_onprem_model_and_wait(model_id, max_wait=3600, check_interval=5):
             resp = requests.get(url_status, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                if data.get("status") == "ok":
-                    logger.info(
-                        f"✅ Modello '{model_id}' risulta ora caricato su OnPrem.")
+                current_model = data.get("current_model", "N/A")
+                logger.info(f"📡 Stato corrente: {data}")
+                if data.get("status") == "ok" and current_model == model_id:
+                    logger.info(f"✅ Modello '{model_id}' risulta ora caricato su OnPrem.")
                     return
                 else:
-                    logger.info(
-                        f"⏳ Modello '{model_id}' in caricamento (status='{data.get('status')}')...")
+                    logger.info(f"⏳ Modello '{model_id}' in caricamento... Stato attuale: '{data.get('status')}', Modello attivo: '{current_model}'")
             else:
-                logger.warning(
-                    f"⚠️ /status ha ritornato codice {resp.status_code}")
+                logger.warning(f"⚠️ /status ha ritornato codice {resp.status_code}")
         except requests.exceptions.RequestException as e:
             logger.warning(f"⚠️ Errore durante polling /status: {e}")
 
         time.sleep(check_interval)
         waited += check_interval
 
-    logger.error(
-        f"❌ Il modello '{model_id}' non si è caricato entro {max_wait} secondi.")
+    logger.error(f"❌ Il modello '{model_id}' non si è caricato entro {max_wait} secondi.")
 
 
 def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, timeout=300):
