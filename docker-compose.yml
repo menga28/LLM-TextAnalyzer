@@ -14,7 +14,7 @@ services:
       bash -c "nohup /fluentd/scripts/filemonitoring_fluentd.sh & fluentd -c /fluentd/etc/fluent.conf"
     networks:
       - llm_network
-    restart: on-failure
+    restart: unless-stopped
 
   couchdb:
     container_name: llm-couchdb

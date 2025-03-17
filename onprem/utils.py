@@ -65,25 +65,37 @@ def check_all_models():
 def download_model(model_dir: str, model_path: str, model_url: str, expected_hash_sha256: str, min_file_size: int = 2*1024*1024*1024):
     """Handles the verification and downloading of a model."""
     logger.info(f"Checking model file: {model_path}")
-    
+
     if os.path.exists(model_path):
         if os.path.isdir(model_path):
             logger.error(f"❌ Error: {model_path} is a directory, not a file.")
             return
-        
-        valid_size = os.path.getsize(model_path) >= min_file_size
-        valid_hash = calculate_sha256(model_path) == expected_hash_sha256
-        
-        if valid_hash and valid_size:
-            logger.info(f"✅ Model file exists and is valid: {model_path}")
-            return
-        else:
-            logger.warning(f"⚠️ Model file exists but is invalid. Redownloading: {model_path}")
-    else:
-        logger.info(f"⬇️ Model does not exist. Starting download: {model_path}")
-    
-    download_and_save_model(model_url, model_path)
 
+        file_size = os.path.getsize(model_path)
+        response = requests.head(model_url)
+        total_size = int(response.headers.get('Content-Length', 0))
+
+        if file_size >= total_size:
+            logger.info(
+                f"✔️ File già completamente scaricato: {model_path}, size: {file_size}/{total_size} bytes")
+            if calculate_sha256(model_path) == expected_hash_sha256:
+                logger.info(f"✅ SHA256 corretto, modello pronto all'uso.")
+                return
+            else:
+                logger.warning(
+                    f"⚠️ SHA256 errato, eliminazione e riscaricamento...")
+                os.remove(model_path)
+
+        # 🔄 Se il file è incompleto, avvia il resume
+        else:
+            logger.info(
+                f"🟡 File incompleto trovato ({file_size}/{total_size} bytes), tentando resume.")
+            download_and_save_model(model_url, model_path)
+            return
+
+    # ⬇️ Se il file non esiste, inizia il download da zero
+    logger.info(f"⬇️ Model does not exist. Starting download: {model_path}")
+    download_and_save_model(model_url, model_path)
 
 
 def download_and_save_model(model_url, model_path):
