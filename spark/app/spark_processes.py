@@ -101,14 +101,24 @@ def send_to_onprem_llm(query, abstract, model_id, max_retries=10, wait_time=5, t
     for attempt in range(max_retries):
         try:
             start_time = time.time()
-            logger.info(f"📤 [{model_id}] Invio richiesta a OnPremLLM...")
+            logger.info(
+                f"📤 [{model_id}] Invio richiesta a OnPremLLM con il payload: {payload}")
             response = requests.post(url, json=payload, timeout=timeout)
             elapsed_time = time.time() - start_time
 
             if response.status_code == 200:
+                response_json = response.json()
+                response_text = response_json.get('response', "No response")
+
                 logger.info(
-                    f"✅ [{model_id}] OnPremLLM ha risposto in {elapsed_time:.2f}s.")
-                return response.json().get('response', "No response")
+                    f"✅ [{model_id}] OnPremLLM ha risposto in {elapsed_time:.2f}s. Risposta ricevuta:")
+                logger.info(f"📝 Risposta completa: {response_text}")
+
+                if response_text.strip() == "<think>":
+                    logger.warning(
+                        f"⚠️ [{model_id}] La risposta sembra essere troncata o errata.")
+
+                return response_text
             else:
                 logger.error(
                     f"❌ [{model_id}] Errore API OnPremLLM: {response.status_code} {response.text}")
